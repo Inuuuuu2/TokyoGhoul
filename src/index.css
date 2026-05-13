@@ -1,5 +1,21 @@
 @import "tailwindcss";
 
+@font-face {
+  font-family: 'ChillHuoGothic';
+  src: url('/fonts/ChillHuoGothic_F_Bold.otf') format('opentype');
+  font-weight: bold;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'ChillHuoGothic';
+  src: url('/fonts/ChillHuoGothic_F_ConBold.otf') format('opentype');
+  font-weight: 900;
+  font-style: normal;
+  font-display: swap;
+}
+
 @theme {
   --color-ghoul-red: #8a0303;
   --color-ghoul-red-hover: #b90404;
@@ -10,8 +26,8 @@
   --color-ghoul-text: #e4e4e7;
   --color-ghoul-muted: #a1a1aa;
 
-  --font-sans: 'Noto Sans SC', system-ui, -apple-system, sans-serif;
-  --font-serif: 'Noto Serif SC', Georgia, serif;
+  --font-sans: 'ChillHuoGothic', system-ui, -apple-system, sans-serif;
+  --font-serif: 'ChillHuoGothic', 'Noto Serif SC', Georgia, serif;
 }
 
 @layer base {

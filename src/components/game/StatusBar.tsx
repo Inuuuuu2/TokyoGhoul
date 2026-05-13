@@ -1,5 +1,5 @@
 import { motion } from "framer-motion";
-import { Coffee, Skull, HeartPulse, Clock, MapPin, Eye, BookOpen, Settings } from "lucide-react";
+import { Coffee, Skull, HeartPulse, Clock, MapPin, Eye } from "lucide-react";
 import { cn } from "../../utils/cn";
 
 interface StatusBarProps {

@@ -28,11 +28,16 @@ export class StreamTagParser {
   private currentBuf = '';
   private optionBuf = '';
   private events: ParserEvent[] = [];
+  private readonly tags: string[];
+  private readonly opaqueTags: string[];
 
   constructor(
-    private readonly tags: string[],
-    private readonly opaqueTags: string[],
-  ) {}
+    tags: string[],
+    opaqueTags: string[],
+  ) {
+    this.tags = tags;
+    this.opaqueTags = opaqueTags;
+  }
 
   feed(chunk: string): ParserEvent[] {
     this.events = [];

@@ -282,7 +282,7 @@ export function createDefaultPreset(): Omit<ChatPreset, 'id' | 'createdAt' | 'up
       scenario_format: '',
       personality_format: '',
       prompts: [],
-      prompt_order: DEFAULT_PROMPT_ORDER.map((p, i) => ({ ...p, enabled: true })),
+      prompt_order: DEFAULT_PROMPT_ORDER.map((p) => ({ ...p, enabled: true })),
     },
   };
 }

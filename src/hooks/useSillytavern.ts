@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useStreamParser } from './useStreamParser';
 import { useApiRouter } from './useApiRouter';
-import { applyParsedToChat, aggregateEvents } from '../sillytavern/variables';
+import { applyParsedToChat } from '../sillytavern/variables';
 import { assemblePrompt } from '../sillytavern/prompt-assembler';
 import {
   DEFAULT_TAGS,

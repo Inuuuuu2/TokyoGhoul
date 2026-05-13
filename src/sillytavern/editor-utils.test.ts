@@ -8,7 +8,7 @@ import {
   movePromptItem,
   clampNumber,
 } from './editor-utils';
-import type { Lorebook, LorebookEntry } from './types';
+import type { Lorebook } from './types';
 
 describe('createDefaultEntry', () => {
   it('returns an entry with required defaults', () => {

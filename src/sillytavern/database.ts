@@ -2,7 +2,7 @@
  * IndexedDB Database Layer
  */
 
-import Dexie, { Table } from 'dexie';
+import Dexie, { type Table } from 'dexie';
 import type { Lorebook, ChatPreset, AppSettings, ChatSession } from './types';
 import { DEFAULT_SETTINGS } from './types';
 

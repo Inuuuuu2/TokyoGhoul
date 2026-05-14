@@ -9,7 +9,7 @@ import { LorebookModal } from './LorebookModal';
 import { PresetModal } from './PresetModal';
 import { VariablesModal } from './VariablesModal';
 import { Toast } from './Toast';
-import { Map, User } from "lucide-react";
+import { Map, User, Skull, Send } from "lucide-react";
 import { StatusBar } from '../game/StatusBar';
 import { Modal } from '../ui/Modal';
 import { motion } from "framer-motion";
@@ -19,6 +19,7 @@ export function GameView() {
   const [historyOpen, setHistoryOpen] = useState(false);
   const [showMap, setShowMap] = useState(false);
   const [showNpc, setShowNpc] = useState(false);
+  const [inputText, setInputText] = useState("");
 
   const lastAssistant = useMemo(
     () => [...(st.activeChat?.messages ?? [])].reverse().find(m => m.role === 'assistant'),
@@ -93,28 +94,115 @@ export function GameView() {
           </button>
         </div>
 
-        {/* 右侧：剧情文本与交互 */}
-        <div className="md:w-2/3 flex flex-col relative">
-          <div className="flex-1 overflow-y-auto pb-32 space-y-6 scroll-smooth pr-4 text-lg leading-relaxed text-[#d4d4d8] font-serif">
-
-            <ThinkingFold text={display.thinking} mode={st.settings?.thinkingDisplay ?? 'fold'} />
-
-            <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 1 }}>
-              <MainTextPane text={display.maintext} isStreaming={isStreaming} />
-            </motion.div>
-
-            <OptionList
-              options={display.options}
-              disabled={isStreaming}
-              onPick={(text) => st.sendGameMessage(text)}
-            />
-
-            {display.sum && (
-              <details className="mt-8 text-ghoul-muted text-sm border-t border-[#333] pt-4">
-                <summary className="cursor-pointer hover:text-white transition-colors">📜 幕间总结</summary>
-                <p className="mt-2 font-sans">{display.sum}</p>
-              </details>
+        {/* 右侧：聊天记录与交互 */}
+        <div className="md:w-2/3 flex flex-col relative h-[calc(100vh-140px)]">
+          <div className="flex-1 overflow-y-auto space-y-6 scroll-smooth pr-4 pb-4 font-serif">
+            {st.activeChat?.messages.length === 0 && (
+              <div className="text-center text-ghoul-muted mt-20 opacity-50">
+                <Skull className="w-12 h-12 mx-auto mb-4 opacity-30" />
+                <p>夜幕降临，命运的齿轮开始转动...</p>
+              </div>
             )}
+            
+            {st.activeChat?.messages.map((msg, idx) => {
+              const isLast = idx === st.activeChat!.messages.length - 1;
+              const isStreamingThis = isLast && isStreaming;
+              const isUser = msg.role === 'user';
+              const name = isUser ? (st.activeChat?.userName || 'You') : (st.activeChat?.characterName || 'Storyteller');
+              
+              // 统一从解析结果或原始内容获取文本
+              let textContent = msg.content;
+              let thinking = '';
+              let summary = '';
+              let options = [];
+              
+              if (msg.role === 'assistant') {
+                if (isStreamingThis) {
+                  textContent = display.maintext;
+                  thinking = display.thinking;
+                  summary = display.sum;
+                  options = display.options;
+                } else if (msg.parsed) {
+                  textContent = msg.parsed.maintext || msg.content;
+                  thinking = msg.parsed.thinking || '';
+                  summary = msg.parsed.sum || '';
+                  options = msg.parsed.options || [];
+                }
+              }
+
+              return (
+                <motion.div 
+                  initial={{ opacity: 0, y: 10 }} 
+                  animate={{ opacity: 1, y: 0 }} 
+                  key={msg.id} 
+                  className={`flex gap-4 ${isUser ? 'flex-row-reverse' : 'flex-row'}`}
+                >
+                  {/* 头像 */}
+                  <div className="flex-shrink-0 w-12 h-12 bg-[#111] border border-[#333] flex items-center justify-center rounded-sm overflow-hidden shadow-lg shadow-black/50">
+                    {isUser ? <User className="text-ghoul-muted w-6 h-6" /> : <Skull className="text-ghoul-red w-6 h-6" />}
+                  </div>
+                  
+                  {/* 内容气泡 */}
+                  <div className={`flex flex-col max-w-[85%] ${isUser ? 'items-end' : 'items-start'}`}>
+                    <span className="text-sm text-ghoul-muted mb-1 font-mono">{name}</span>
+                    <div className={`p-4 rounded-sm border shadow-md ${isUser ? 'bg-[#1a1a1a] border-[#333] text-gray-300' : 'bg-[#0a0a0c] border-[#440000]/60 text-[#d4d4d8]'}`}>
+                      
+                      {!isUser && thinking && (
+                        <ThinkingFold text={thinking} mode={st.settings?.thinkingDisplay ?? 'fold'} />
+                      )}
+                      
+                      <div className="st-maintext whitespace-pre-wrap leading-relaxed text-lg">
+                        {textContent}
+                        {isStreamingThis && <span className="st-cursor">▍</span>}
+                      </div>
+                      
+                      {!isUser && summary && (
+                        <div className="mt-4 pt-3 border-t border-[#333]/50 text-xs text-ghoul-muted/70 font-sans bg-black/20 -mx-4 -mb-4 p-4 rounded-b-sm">
+                          📜 {summary}
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                </motion.div>
+              );
+            })}
+          </div>
+
+          {/* 底部输入与选项区域 */}
+          <div className="shrink-0 bg-gradient-to-t from-[#050505] via-[#050505] to-transparent pt-6 pb-2">
+            {!isStreaming && display.options && display.options.length > 0 && (
+              <OptionList
+                options={display.options}
+                disabled={isStreaming}
+                onPick={(text) => st.sendGameMessage(text)}
+              />
+            )}
+
+            <form 
+              onSubmit={(e) => {
+                e.preventDefault();
+                if (!inputText.trim() || isStreaming) return;
+                st.sendGameMessage(inputText);
+                setInputText('');
+              }}
+              className="mt-3 flex gap-2"
+            >
+              <input 
+                type="text" 
+                value={inputText}
+                onChange={e => setInputText(e.target.value)}
+                disabled={isStreaming}
+                placeholder="输入你的行动或对话..." 
+                className="flex-1 bg-[#111] border border-[#333] focus:border-ghoul-red px-4 py-3 text-white outline-none font-serif transition-colors disabled:opacity-50 shadow-inner"
+              />
+              <button 
+                type="submit" 
+                disabled={!inputText.trim() || isStreaming}
+                className="bg-ghoul-red/10 border border-ghoul-red text-ghoul-red px-6 hover:bg-ghoul-red hover:text-white transition-all flex items-center justify-center disabled:opacity-30 disabled:hover:bg-transparent disabled:hover:text-ghoul-red disabled:cursor-not-allowed cursor-pointer"
+              >
+                <Send className="w-5 h-5" />
+              </button>
+            </form>
           </div>
         </div>
       </main>

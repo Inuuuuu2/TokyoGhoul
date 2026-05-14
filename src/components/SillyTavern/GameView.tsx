@@ -61,7 +61,8 @@ export function GameView() {
   const time = st.activeChat?.variables?.time?.toString() || '23:45';
 
   return (
-    {showTitleScreen && (
+    <>
+      {showTitleScreen && (
         <TitleScreen onAction={handleTitleScreenAction} />
       )}
 
@@ -158,5 +159,6 @@ export function GameView() {
       {/* 地图模态框 */}
       <AreaMapModal isOpen={showMap} onClose={() => setShowMap(false)} />
     </div>
+    </>
   );
 }

@@ -1,6 +1,5 @@
 import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { useSillytavern } from '../../hooks/useSillytavern';
 import './TitleScreen.css';
 
 export function TitleScreen({ onAction }: { onAction: (action: "start" | "presets" | "settings") => void }) {

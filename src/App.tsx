@@ -1,16 +1,19 @@
 import { useState } from 'react';
 import { GameView } from './components/SillyTavern/GameView';
-import { OpeningSequence } from './components/game/OpeningSequence';
+import { TitleScreen } from './components/game/TitleScreen';
 
 export default function App() {
-  const [showOpening, setShowOpening] = useState(true);
+  const [inGame, setInGame] = useState(false);
 
   return (
     <>
-      {showOpening && <OpeningSequence onComplete={() => setShowOpening(false)} />}
-      <div style={{ display: showOpening ? 'none' : 'block' }}>
+      <div className={inGame ? 'block' : 'hidden'} style={{ minHeight: '100vh' }}>
         <GameView />
       </div>
+      
+      {!inGame && (
+        <TitleScreen onStartGame={() => setInGame(true)} />
+      )}
     </>
   );
 }

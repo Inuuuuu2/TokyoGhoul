@@ -1,7 +1,5 @@
 import { useState, useMemo } from 'react';
 import { useSillytavern } from '../../hooks/useSillytavern';
-import { ThinkingFold } from './ThinkingFold';
-import { MainTextPane } from './MainTextPane';
 
 import { HistoryDrawer } from './HistoryDrawer';
 import { SettingsModal } from './SettingsModal';
@@ -15,8 +13,6 @@ import { ChatInputArea } from "../game/ChatInputArea";
 import { NpcProfileModal } from "../game/NpcProfileModal";
 import { AreaMapModal } from "../game/AreaMapModal";
 import { StatusBar } from '../game/StatusBar';
-import { Modal } from '../ui/Modal';
-import { motion } from "framer-motion";
 
 export function GameView() {
   const st = useSillytavern();

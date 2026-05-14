@@ -1,3 +1,5 @@
+@import url('https://fonts.googleapis.com/css2?family=Cinzel:wght@700;900&family=Noto+Serif+JP:wght@300;700&display=swap');
+
 .opening-vignette {
   background: radial-gradient(circle at center, transparent 0%, #000 100%);
   z-index: 10;
@@ -81,5 +83,26 @@
 }
 
 .japanese-serif {
-  font-family: "Shippori Mincho", "Noto Serif JP", "MS Mincho", serif;
+  font-family: 'Noto Serif JP', "Shippori Mincho", "MS Mincho", serif;
+}
+
+.english-title {
+  font-family: 'Cinzel', serif;
+}
+
+@keyframes screen-shake {
+  0%, 100% { transform: translate(0, 0) rotate(0deg); }
+  10% { transform: translate(-10px, -10px) rotate(-2deg); }
+  20% { transform: translate(10px, 10px) rotate(2deg); }
+  30% { transform: translate(-10px, 10px) rotate(0deg); }
+  40% { transform: translate(10px, -10px) rotate(2deg); }
+  50% { transform: translate(-10px, 0px) rotate(-2deg); }
+  60% { transform: translate(10px, 0px) rotate(0deg); }
+  70% { transform: translate(0px, 10px) rotate(-2deg); }
+  80% { transform: translate(0px, -10px) rotate(2deg); }
+  90% { transform: translate(-10px, 0px) rotate(0deg); }
+}
+
+.animate-shake {
+  animation: screen-shake 0.5s cubic-bezier(.36,.07,.19,.97) both;
 }

@@ -8,11 +8,11 @@ export function OpeningSequence({ onComplete }: { onComplete: () => void }) {
   useEffect(() => {
     // 阶段控制，让节奏更舒缓和富有电影感
     const timers = [
-      setTimeout(() => setPhase(1), 1000), // 显示第一句话
-      setTimeout(() => setPhase(2), 5000), // 第一句话消失，显示第二句话
-      setTimeout(() => setPhase(3), 8500), // 爆发、RGB分离的故障效果
-      setTimeout(() => setPhase(4), 11500), // 渐隐，进入深红深渊
-      setTimeout(onComplete, 13000),        // 彻底卸载组件
+      setTimeout(() => setPhase(1), 1000),  // [1.0s] 显示第一句话
+      setTimeout(() => setPhase(2), 7000),  // [7.0s] 第一句话消失，显示第二句话（留了6秒阅读时间）
+      setTimeout(() => setPhase(3), 13000), // [13.0s] 第二句话消失，爆发大标题（留了6秒阅读时间）
+      setTimeout(() => setPhase(4), 18000), // [18.0s] 大标题停留5秒后开始渐隐
+      setTimeout(onComplete, 20000),        // [20.0s] 彻底卸载组件（2秒淡出时间）
     ];
     return () => timers.forEach(clearTimeout);
   }, [onComplete]);
@@ -46,7 +46,7 @@ export function OpeningSequence({ onComplete }: { onComplete: () => void }) {
             initial={{ opacity: 0, filter: 'blur(20px)', scale: 0.95 }}
             animate={{ opacity: 0.9, filter: 'blur(0px)', scale: 1 }}
             exit={{ opacity: 0, filter: 'blur(15px)', scale: 1.05 }}
-            transition={{ duration: 2.5, ease: "easeInOut" }}
+            transition={{ duration: 3.5, ease: "easeInOut" }}
             className="text-[#e2e2e2] text-xl md:text-2xl tracking-[0.6em] japanese-serif text-glow font-light"
           >
             美しく悲しい世界
@@ -59,7 +59,7 @@ export function OpeningSequence({ onComplete }: { onComplete: () => void }) {
             initial={{ opacity: 0, filter: 'blur(10px)', y: 10 }}
             animate={{ opacity: 1, filter: 'blur(0px)', y: 0 }}
             exit={{ opacity: 0, filter: 'blur(10px)', scale: 1.1 }}
-            transition={{ duration: 2, ease: "easeOut" }}
+            transition={{ duration: 3, ease: "easeOut" }}
             className="text-ghoul-red text-2xl md:text-3xl tracking-[0.4em] japanese-serif text-glow-red font-bold"
           >
             ダークでスリリングな世界観

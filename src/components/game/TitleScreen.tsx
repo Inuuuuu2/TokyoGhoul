@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import './TitleScreen.css';
 
-export function TitleScreen({ onAction }: { onAction: (action: "start" | "presets" | "settings") => void }) {
+export function TitleScreen({ onAction, hasSaves }: { onAction: (action: "start" | "continue" | "presets" | "settings") => void; hasSaves?: boolean }) {
 
   // phase: 0=空白, 1=句1, 2=句2, 3=主标题展示, 4=主标题停留并显示菜单, 5=开始分割转场
   const [phase, setPhase] = useState(0);
@@ -17,7 +17,7 @@ export function TitleScreen({ onAction }: { onAction: (action: "start" | "preset
     return () => timers.forEach(clearTimeout);
   }, []);
 
-  const handleAction = (action: 'start' | 'presets' | 'settings') => {
+  const handleAction = (action: 'start' | 'continue' | 'presets' | 'settings') => {
     setPhase(5);
     setTimeout(() => onAction(action), 2000); // 2秒转场结束后触发行为
   };
@@ -126,19 +126,27 @@ export function TitleScreen({ onAction }: { onAction: (action: "start" | "preset
 
               {/* 游戏开始菜单栏 */}
               {phase === 4 && (
-                <motion.div 
+                <motion.div
                   initial={{ opacity: 0, y: 20 }}
                   animate={{ opacity: 1, y: 0 }}
                   transition={{ duration: 1 }}
                   className="mt-16 flex flex-col gap-4 w-64 items-center"
                 >
-                  <button 
+                  <button
                     onClick={() => handleAction("start")}
                     className="w-full py-3 border border-ghoul-muted/30 text-white hover:border-ghoul-red hover:text-ghoul-red hover:bg-ghoul-red/10 transition-all font-serif tracking-widest bg-black/50 backdrop-blur-sm"
                   >
                     开始游戏
                   </button>
-                  <button 
+                  {hasSaves && (
+                    <button
+                      onClick={() => handleAction("continue")}
+                      className="w-full py-3 border border-ghoul-muted/30 text-white hover:border-ghoul-red hover:text-ghoul-red hover:bg-ghoul-red/10 transition-all font-serif tracking-widest bg-black/50 backdrop-blur-sm"
+                    >
+                      继续游戏
+                    </button>
+                  )}
+                  <button
                     onClick={() => handleAction("presets")}
                     className="w-full py-3 border border-ghoul-muted/30 text-ghoul-muted hover:border-white hover:text-white transition-all font-serif tracking-widest bg-black/50 backdrop-blur-sm"
                   >

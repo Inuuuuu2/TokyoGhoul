@@ -36,9 +36,17 @@ export function GameView() {
   const [phase, setPhase] = useState<'title' | 'creation' | 'game'>('title');
 
   // 处理开始画面的按钮点击
-  const handleTitleScreenAction = (action: 'start' | 'presets' | 'settings') => {
+  const handleTitleScreenAction = (action: 'start' | 'continue' | 'presets' | 'settings') => {
     if (action === 'start') {
       setPhase('creation');
+    } else if (action === 'continue') {
+      // 检查是否有存档，如果有就直接进入游戏界面读取 activeChat
+      if (st.chats.length > 0) {
+        setPhase('game');
+      } else {
+        st.showToast("没有找到可继续的存档！");
+        setPhase('creation');
+      }
     } else {
       // 保持之前的逻辑：如果是直接进设置，可以跳过 creation 或者直接隐藏 title 并进 game 且弹窗
       setPhase('game');
@@ -103,7 +111,7 @@ export function GameView() {
     <>
       <AnimatePresence>
         {phase === 'title' && (
-          <TitleScreen key="title" onAction={handleTitleScreenAction} />
+          <TitleScreen key="title" onAction={handleTitleScreenAction} hasSaves={st.chats.length > 0} />
         )}
         {phase === 'creation' && (
           <CharacterCreationScreen key="creation" onComplete={handleCreationComplete} />

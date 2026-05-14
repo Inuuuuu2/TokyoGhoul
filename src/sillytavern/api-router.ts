@@ -1,4 +1,6 @@
 import type { ApiSettings, ApiTarget, Task } from './types';
+import { callGemini } from './providers/gemini';
+import type { GeminiConfig } from './providers/gemini';
 
 interface ChatRequest {
   messages: Array<{ role: string; content: string }>;
@@ -36,6 +38,65 @@ export function createApiRouter(settings: ApiSettings, deps: RouterDeps = {}) {
 
   async function callOnce(target: ApiTarget, body: ChatRequest): Promise<Response> {
     const ep = endpointFor(target);
+    
+    // Check if we should use Gemini SDK instead of standard OpenAI format
+    // A simple heuristic is if the model name contains "gemini" and baseUrl is not a proxy that handles Gemini
+    const isGeminiModel = ep.model.toLowerCase().includes('gemini');
+    const isGeminiNativeUrl = !ep.baseUrl || ep.baseUrl.includes('generativelanguage.googleapis.com');
+    
+    if (isGeminiModel && isGeminiNativeUrl) {
+      try {
+        const config: GeminiConfig = {
+          apiKey: ep.apiKey,
+          model: ep.model,
+          temperature: body.temperature ?? 1.0,
+          maxOutputTokens: body.max_tokens,
+          topP: body.top_p,
+        };
+        
+        const textResponse = await callGemini(body.messages, config);
+        
+        // Mock a fetch Response object to keep compatibility
+        return new Response(JSON.stringify({
+          id: 'chatcmpl-' + Math.random().toString(36).substr(2, 9),
+          object: 'chat.completion',
+          created: Math.floor(Date.now() / 1000),
+          model: ep.model,
+          choices: [{
+            index: 0,
+            message: {
+              role: 'assistant',
+              content: textResponse,
+            },
+            finish_reason: 'stop'
+          }],
+          usage: {
+            prompt_tokens: 0,
+            completion_tokens: 0,
+            total_tokens: 0
+          }
+        }), {
+          status: 200,
+          headers: {
+            'Content-Type': 'application/json'
+          }
+        });
+      } catch (err: any) {
+        return new Response(JSON.stringify({
+          error: {
+            message: err.message || 'Gemini API Error',
+            type: 'gemini_error'
+          }
+        }), {
+          status: 500,
+          headers: {
+            'Content-Type': 'application/json'
+          }
+        });
+      }
+    }
+
+    // Standard OpenAI compatible request
     return await fetchImpl(`${ep.baseUrl}/chat/completions`, {
       method: 'POST',
       headers: {

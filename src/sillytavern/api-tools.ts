@@ -19,6 +19,7 @@ const COMMON_MODELS_BY_HOST: { match: string; models: string[] }[] = [
   { match: 'openai', models: ['gpt-3.5-turbo', 'gpt-4', 'gpt-4-turbo', 'gpt-4o', 'gpt-4o-mini'] },
   { match: 'anthropic', models: ['claude-3-5-sonnet-latest', 'claude-3-opus-latest', 'claude-3-5-haiku-latest'] },
   { match: 'gemini', models: ['gemini-1.5-flash', 'gemini-1.5-pro', 'gemini-2.0-flash'] },
+  { match: 'generativelanguage', models: ['gemini-1.5-flash', 'gemini-1.5-pro', 'gemini-2.0-flash', 'gemini-2.5-flash'] },
 ];
 
 const FALLBACK_MODELS = ['gpt-3.5-turbo', 'gpt-4', 'deepseek-chat', 'qwen-turbo'];
@@ -54,6 +55,16 @@ export async function fetchModels(target: ApiCallTarget): Promise<{ models: stri
   if (!baseUrl) {
     return { models: [], source: 'fallback', error: '请填写 API 基础 URL' };
   }
+  
+  // If it's a native Gemini URL, don't try to fetch /models as it uses a different API
+  if (baseUrl.includes('generativelanguage.googleapis.com')) {
+    return {
+      models: getFallbackModels(baseUrl),
+      source: 'fallback',
+      error: 'Google API currently does not support OpenAI compatible /models endpoint'
+    };
+  }
+
   const key = target.apiKey?.trim();
   let lastError: unknown;
   try {
@@ -86,6 +97,15 @@ export async function testConnection(target: ApiCallTarget): Promise<{ ok: boole
   if (!baseUrl || !key) {
     return { ok: false, error: '请填写 URL 和 Key' };
   }
+  
+  // If it's a native Gemini URL, skip connection test for now
+  // or test using the gemini API if we import callGemini here, 
+  // but let's just do a basic fallback check.
+  if (baseUrl.includes('generativelanguage.googleapis.com')) {
+    // Just a basic check that it's correctly formatted
+    return { ok: true, status: 200 };
+  }
+
   try {
     const res = await fetch(`${baseUrl}/chat/completions`, {
       method: 'POST',

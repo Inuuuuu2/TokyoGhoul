@@ -1,6 +1,9 @@
 import { useState, useMemo } from 'react';
 import { useSillytavern } from '../../hooks/useSillytavern';
 import { TitleScreen } from '../game/TitleScreen';
+import { CharacterCreationScreen } from '../game/CharacterCreationScreen';
+import type { CreationData } from '../game/CharacterCreationScreen';
+import { AnimatePresence } from 'framer-motion';
 
 import { HistoryDrawer } from './HistoryDrawer';
 import { SettingsModal } from './SettingsModal';
@@ -21,21 +24,34 @@ export function GameView() {
   const [showMap, setShowMap] = useState(false);
   const [showNpc, setShowNpc] = useState(false);
   const [inputText, setInputText] = useState("");
-  
-  // 标题界面的控制
-  const [showTitleScreen, setShowTitleScreen] = useState(true);
+
+  // 页面流程控制: title -> creation -> game
+  const [phase, setPhase] = useState<'title' | 'creation' | 'game'>('title');
 
   // 处理开始画面的按钮点击
   const handleTitleScreenAction = (action: 'start' | 'presets' | 'settings') => {
-    // 关闭标题画面
-    setShowTitleScreen(false);
-    
-    // 如果需要打开特定弹窗，加一点延迟等斩击动画结束再弹出
-    if (action === 'presets') {
-      setTimeout(() => st.setShowPresets(true), 1200);
-    } else if (action === 'settings') {
-      setTimeout(() => st.setShowSettings(true), 1200);
+    if (action === 'start') {
+      setPhase('creation');
+    } else {
+      // 保持之前的逻辑：如果是直接进设置，可以跳过 creation 或者直接隐藏 title 并进 game 且弹窗
+      setPhase('game');
+      if (action === 'presets') {
+        setTimeout(() => st.setShowPresets(true), 1200);
+      } else if (action === 'settings') {
+        setTimeout(() => st.setShowSettings(true), 1200);
+      }
     }
+  };
+
+  const handleCreationComplete = async (data: CreationData) => {
+    // 建立新存档并初始化录入的数据
+    await st.createChat(`轮回 - ${data.name}`, {
+      userName: data.name,
+      variables: data.variables
+    });
+    setPhase('game');
+    // 可以在这里触发一条初始剧情对话：
+    // setTimeout(() => st.sendGameMessage("（系统提示：角色档案建立完毕，开始同步神经网络...）"), 1000);
   };
 
   const lastAssistant = useMemo(
@@ -62,9 +78,14 @@ export function GameView() {
 
   return (
     <>
-      {showTitleScreen && (
-        <TitleScreen onAction={handleTitleScreenAction} />
-      )}
+      <AnimatePresence>
+        {phase === 'title' && (
+          <TitleScreen key="title" onAction={handleTitleScreenAction} />
+        )}
+        {phase === 'creation' && (
+          <CharacterCreationScreen key="creation" onComplete={handleCreationComplete} />
+        )}
+      </AnimatePresence>
 
       <div className="min-h-screen flex flex-col bg-[url('https://www.transparenttextures.com/patterns/black-paper.png')] bg-ghoul-dark text-ghoul-text relative">
       {/* 顶部状态栏 */}

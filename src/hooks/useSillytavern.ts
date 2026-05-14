@@ -91,16 +91,16 @@ export function useSillytavern() {
 
   // ---- chat helpers ----
   const createChat = useCallback(
-    async (name: string, options?: { presetId?: string; lorebookIds?: string[] }) => {
+    async (name: string, options?: { presetId?: string; lorebookIds?: string[]; userName?: string; variables?: Record<string, any> }) => {
       const chat: ChatSession = {
         id: crypto.randomUUID(),
         name,
         messages: [],
         characterName: settings?.characterName ?? DEFAULT_SETTINGS.characterName,
-        userName: settings?.userName ?? DEFAULT_SETTINGS.userName,
+        userName: options?.userName ?? settings?.userName ?? DEFAULT_SETTINGS.userName,
         presetId: options?.presetId ?? settings?.activePresetId ?? null,
         lorebookIds: options?.lorebookIds ?? settings?.activeLorebookIds ?? [],
-        variables: {},
+        variables: options?.variables ?? {},
         createdAt: Date.now(),
         updatedAt: Date.now(),
       };

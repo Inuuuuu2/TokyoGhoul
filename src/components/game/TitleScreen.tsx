@@ -3,9 +3,8 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { useSillytavern } from '../../hooks/useSillytavern';
 import './TitleScreen.css';
 
-export function TitleScreen({ onStartGame }: { onStartGame: () => void }) {
-  const st = useSillytavern();
-  
+export function TitleScreen({ onAction }: { onAction: (action: "start" | "presets" | "settings") => void }) {
+
   // phase: 0=空白, 1=句1, 2=句2, 3=主标题展示, 4=主标题停留并显示菜单, 5=开始分割转场
   const [phase, setPhase] = useState(0);
 
@@ -19,9 +18,9 @@ export function TitleScreen({ onStartGame }: { onStartGame: () => void }) {
     return () => timers.forEach(clearTimeout);
   }, []);
 
-  const handleStart = () => {
+  const handleAction = (action: 'start' | 'presets' | 'settings') => {
     setPhase(5);
-    setTimeout(onStartGame, 2000); // 2秒后完全加载游戏主界面
+    setTimeout(() => onAction(action), 2000); // 2秒转场结束后触发行为
   };
 
   return (
@@ -135,25 +134,19 @@ export function TitleScreen({ onStartGame }: { onStartGame: () => void }) {
                   className="mt-16 flex flex-col gap-4 w-64 items-center"
                 >
                   <button 
-                    onClick={handleStart}
+                    onClick={() => handleAction("start")}
                     className="w-full py-3 border border-ghoul-muted/30 text-white hover:border-ghoul-red hover:text-ghoul-red hover:bg-ghoul-red/10 transition-all font-serif tracking-widest bg-black/50 backdrop-blur-sm"
                   >
                     开始游戏
                   </button>
                   <button 
-                    onClick={() => {
-                      st.openPresets();
-                      handleStart();
-                    }}
+                    onClick={() => handleAction("presets")}
                     className="w-full py-3 border border-ghoul-muted/30 text-ghoul-muted hover:border-white hover:text-white transition-all font-serif tracking-widest bg-black/50 backdrop-blur-sm"
                   >
                     选择对话
                   </button>
                   <button 
-                    onClick={() => {
-                      st.openSettings();
-                      handleStart();
-                    }}
+                    onClick={() => handleAction("settings")}
                     className="w-full py-3 border border-ghoul-muted/30 text-ghoul-muted hover:border-white hover:text-white transition-all font-serif tracking-widest bg-black/50 backdrop-blur-sm"
                   >
                     API 设置

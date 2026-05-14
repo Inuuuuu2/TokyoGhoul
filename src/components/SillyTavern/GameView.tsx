@@ -1,5 +1,6 @@
 import { useState, useMemo } from 'react';
 import { useSillytavern } from '../../hooks/useSillytavern';
+import { TitleScreen } from '../game/TitleScreen';
 
 import { HistoryDrawer } from './HistoryDrawer';
 import { SettingsModal } from './SettingsModal';
@@ -20,6 +21,22 @@ export function GameView() {
   const [showMap, setShowMap] = useState(false);
   const [showNpc, setShowNpc] = useState(false);
   const [inputText, setInputText] = useState("");
+  
+  // 标题界面的控制
+  const [showTitleScreen, setShowTitleScreen] = useState(true);
+
+  // 处理开始画面的按钮点击
+  const handleTitleScreenAction = (action: 'start' | 'presets' | 'settings') => {
+    // 关闭标题画面
+    setShowTitleScreen(false);
+    
+    // 如果需要打开特定弹窗，加一点延迟等斩击动画结束再弹出
+    if (action === 'presets') {
+      setTimeout(() => st.setShowPresets(true), 1200);
+    } else if (action === 'settings') {
+      setTimeout(() => st.setShowSettings(true), 1200);
+    }
+  };
 
   const lastAssistant = useMemo(
     () => [...(st.activeChat?.messages ?? [])].reverse().find(m => m.role === 'assistant'),
@@ -44,7 +61,11 @@ export function GameView() {
   const time = st.activeChat?.variables?.time?.toString() || '23:45';
 
   return (
-    <div className="min-h-screen flex flex-col bg-[url('https://www.transparenttextures.com/patterns/black-paper.png')] bg-ghoul-dark text-ghoul-text relative">
+    {showTitleScreen && (
+        <TitleScreen onAction={handleTitleScreenAction} />
+      )}
+
+      <div className="min-h-screen flex flex-col bg-[url('https://www.transparenttextures.com/patterns/black-paper.png')] bg-ghoul-dark text-ghoul-text relative">
       {/* 顶部状态栏 */}
       <StatusBar
         rcLevel={rcLevel}

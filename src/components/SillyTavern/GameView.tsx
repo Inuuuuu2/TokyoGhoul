@@ -11,8 +11,15 @@ import { LorebookModal } from './LorebookModal';
 import { PresetModal } from './PresetModal';
 import { VariablesModal } from './VariablesModal';
 import { Toast } from './Toast';
-import { Map, User } from "lucide-react";
+import { Map, User, Heart, Trash2, Home } from "lucide-react";
 import { ChatHistoryList } from "../game/ChatHistoryList";
+
+const NPC_PROFILES: Record<string, { title: string, color: string }> = {
+  '神代利世': { title: '「暴食者」 | Binge Eater', color: 'from-ghoul-red' },
+  '雾岛董香': { title: '「兔子」 | Rabbit', color: 'from-blue-600' },
+  '芳村功善': { title: '「不杀之枭」 | Non-Killing Owl', color: 'from-yellow-800' },
+  '铃屋什造': { title: 'CCG二等搜查官 | CCG Investigator', color: 'from-white' },
+};
 import { ChatInputArea } from "../game/ChatInputArea";
 import { NpcProfileModal } from "../game/NpcProfileModal";
 import { AreaMapModal } from "../game/AreaMapModal";
@@ -76,6 +83,22 @@ export function GameView() {
   const location = st.activeChat?.variables?.location?.toString() || '20区 - 阴暗小巷';
   const time = st.activeChat?.variables?.time?.toString() || '23:45';
 
+  const npcName = st.activeChat?.characterName || st.settings?.characterName || '未知角色';
+  const npcProfile = NPC_PROFILES[npcName] || { title: '喰种 / 角色', color: 'from-gray-600' };
+
+  // 提取好感度
+  const affinityKey = `affinity_${npcName}`;
+  const affinityValue = parseInt(st.activeChat?.variables?.[affinityKey]?.toString() || '0');
+
+  // 删除当前对话
+  const handleDeleteChat = () => {
+    if (!st.activeChat) return;
+    if (window.confirm('警告：是否彻底删除当前记忆回溯？此操作不可逆。')) {
+      st.removeChat(st.activeChat.id);
+      setPhase('title');
+    }
+  };
+
   return (
     <>
       <AnimatePresence>
@@ -100,25 +123,49 @@ export function GameView() {
 
       {/* 控制菜单 */}
       <div className="flex gap-4 p-4 border-b border-[#222] bg-[#050505] overflow-x-auto whitespace-nowrap">
+        <button onClick={() => setPhase('title')} className="flex items-center gap-1 text-sm font-mono text-ghoul-muted hover:text-white transition-colors">
+          <Home className="w-4 h-4" /> HOME
+        </button>
         <button onClick={() => setHistoryOpen(true)} className="text-sm font-mono text-ghoul-muted hover:text-white transition-colors">☰ HISTORY [{st.activeChat?.messages?.length ?? 0}]</button>
         <button onClick={() => st.openSettings()} className="text-sm font-mono text-ghoul-muted hover:text-white transition-colors">⚙ SETTINGS</button>
         <button onClick={() => st.openLorebooks()} className="text-sm font-mono text-ghoul-muted hover:text-white transition-colors">📖 LOREBOOKS [{st.settings?.activeLorebookIds?.length ?? 0}]</button>
         <button onClick={() => st.openPresets()} className="text-sm font-mono text-ghoul-muted hover:text-white transition-colors">✦ PRESETS</button>
         <button onClick={() => st.openVariables()} className="text-sm font-mono text-ghoul-muted hover:text-white transition-colors">📊 VARS [{Object.keys(st.activeChat?.variables ?? {}).length}]</button>
-        <button disabled={!lastAssistant} onClick={() => st.regenerateLast()} className="text-sm font-mono text-ghoul-muted hover:text-ghoul-red transition-colors disabled:opacity-30 disabled:cursor-not-allowed">↻ RE-ROLL</button>
+        <button disabled={!lastAssistant} onClick={() => st.regenerateLast()} className="text-sm font-mono text-ghoul-muted hover:text-white transition-colors disabled:opacity-30 disabled:cursor-not-allowed">↻ RE-ROLL</button>
+        <div className="flex-1" /> {/* Spacer */}
+        <button onClick={handleDeleteChat} className="flex items-center gap-1 text-sm font-mono text-ghoul-muted hover:text-ghoul-red transition-colors">
+          <Trash2 className="w-4 h-4" /> DELETE
+        </button>
       </div>
 
       {/* 主界面 */}
       <main className="flex-1 flex flex-col md:flex-row max-w-6xl mx-auto w-full p-4 gap-6">
 
         {/* 左侧：环境立绘或氛围图 */}
-        <div className="md:w-1/3 flex flex-col gap-4">
+        <div className="w-full md:w-64 flex-shrink-0 flex flex-col gap-4">
           <div className="relative aspect-[3/4] border border-[#222] bg-[#0a0a0c] overflow-hidden group">
             <div className="absolute inset-0 bg-gradient-to-b from-transparent to-[#050505] z-10" />
-            <div className="absolute inset-0 opacity-20 group-hover:opacity-40 transition-opacity duration-1000 bg-[radial-gradient(ellipse_at_center,_var(--tw-gradient-stops))] from-ghoul-red via-ghoul-dark to-ghoul-darker" />
-            <div className="absolute bottom-4 left-4 z-20">
-              <h2 className="font-serif text-2xl text-white tracking-[0.2em] mb-1 glitch-effect" data-text="神代利世">神代利世</h2>
-              <p className="text-sm text-ghoul-muted font-mono">「暴食者」 | Binge Eater</p>
+            <div className={`absolute inset-0 opacity-20 group-hover:opacity-40 transition-opacity duration-1000 bg-[radial-gradient(ellipse_at_center,_var(--tw-gradient-stops))] ${npcProfile.color} via-ghoul-dark to-ghoul-darker`} />
+            <div className="absolute bottom-4 left-4 z-20 w-[calc(100%-2rem)]">
+              <h2 className="font-serif text-xl md:text-2xl text-white tracking-[0.2em] mb-1 glitch-effect" data-text={npcName}>{npcName}</h2>
+              <p className="text-xs text-ghoul-muted font-mono mb-3">{npcProfile.title}</p>
+
+              {/* 好感度模块 */}
+              <div className="flex flex-col gap-1 w-full bg-black/40 p-2 rounded border border-[#333]/50 backdrop-blur-sm" title={`对你的当前好感度: ${affinityValue}`}>
+                <div className="flex justify-between items-center text-xs font-mono">
+                  <span className="text-ghoul-muted flex items-center gap-1">
+                    <Heart className={`w-3 h-3 ${affinityValue > 50 ? 'text-ghoul-red fill-ghoul-red/50' : 'text-gray-500'}`} />
+                    AFFINITY
+                  </span>
+                  <span className={affinityValue > 50 ? 'text-ghoul-red' : 'text-gray-400'}>{affinityValue}</span>
+                </div>
+                <div className="w-full h-1 bg-[#111] rounded-full overflow-hidden">
+                  <div
+                    className="h-full bg-gradient-to-r from-red-900 to-ghoul-red transition-all duration-1000"
+                    style={{ width: `${Math.min(100, Math.max(0, affinityValue))}%` }}
+                  />
+                </div>
+              </div>
             </div>
             <button
               onClick={() => setShowNpc(true)}
@@ -133,12 +180,12 @@ export function GameView() {
             className="flex items-center gap-3 p-4 bg-[#111] border border-[#222] hover:border-ghoul-red transition-colors w-full group cursor-pointer"
           >
             <Map className="w-5 h-5 text-ghoul-muted group-hover:text-ghoul-red transition-colors" />
-            <span className="tracking-widest flex-1 text-left">检视区域地图</span>
+            <span className="tracking-widest flex-1 text-left text-sm">检视区域地图</span>
           </button>
         </div>
 
         {/* 右侧：聊天记录与交互 */}
-        <div className="md:w-2/3 flex flex-col relative h-[calc(100vh-140px)]">
+        <div className="flex-1 flex flex-col relative h-[calc(100vh-140px)]">
           <div className="flex-1 overflow-y-auto space-y-6 scroll-smooth pr-4 pb-4 font-serif">
             <ChatHistoryList 
               messages={st.activeChat?.messages ?? []} 

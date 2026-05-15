@@ -1,6 +1,8 @@
 import { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { CustomFactionForm, type CustomFactionState } from './CustomFactionForm';
+import { useSillytavern } from '../../hooks/useSillytavern';
+import { resolveAvatar } from '../../sillytavern/avatar-registry';
 
 export type Faction = 'ghoul' | 'ccg' | 'human' | 'custom';
 
@@ -8,6 +10,9 @@ export interface CreationData {
   name: string;
   faction: Faction;
   variables: Record<string, any>;
+  /** When the user picked a saved profile, this is its id so the caller can
+   *  switch the active user. */
+  presetUserId?: string;
 }
 
 const INITIAL_CUSTOM_STATE: CustomFactionState = {
@@ -20,8 +25,20 @@ const INITIAL_CUSTOM_STATE: CustomFactionState = {
 };
 
 export function CharacterCreationScreen({ onComplete }: { onComplete: (data: CreationData) => void }) {
+  const { users } = useSillytavern();
   const [name, setName] = useState('');
   const [faction, setFaction] = useState<Faction | null>(null);
+
+  const handlePickPreset = (id: string) => {
+    const u = users.find((x) => x.id === id);
+    if (!u) return;
+    onComplete({
+      name: u.name,
+      faction: ((u.initialVariables?.faction as Faction) ?? 'custom'),
+      variables: { ...(u.initialVariables ?? {}) },
+      presetUserId: u.id,
+    });
+  };
 
   // 基础属性状态
   const [rcLevel, setRcLevel] = useState(1000);
@@ -94,6 +111,65 @@ export function CharacterCreationScreen({ onComplete }: { onComplete: (data: Cre
             subject registration
           </p>
         </div>
+
+        {/* 预设角色 · 快速开局（仅当存在已保存的 user profile 时显示） */}
+        {users.length > 0 && (
+          <div className="flex flex-col gap-3 md:gap-4 border border-[#222] bg-[#0a0a0a]/60 rounded-sm p-4 md:p-5">
+            <div className="flex items-baseline justify-between flex-wrap gap-2">
+              <label className="text-ghoul-muted tracking-widest text-xs md:text-sm uppercase">
+                预设角色 · 一键开局
+              </label>
+              <span className="text-[10px] text-ghoul-muted/60 font-mono">
+                跳过下面的填表，直接以该档案进入游戏
+              </span>
+            </div>
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+              {users.map((u) => {
+                const avatarUrl = resolveAvatar(u.avatar);
+                const summary =
+                  u.description && u.description.length > 80
+                    ? u.description.slice(0, 80).replace(/\s+/g, ' ') + '…'
+                    : u.description ?? '';
+                return (
+                  <button
+                    key={u.id}
+                    onClick={() => handlePickPreset(u.id)}
+                    className="flex gap-3 p-3 border border-[#222] bg-[#050505] hover:border-ghoul-red hover:bg-ghoul-red/5 active:border-ghoul-red transition-colors text-left rounded-sm cursor-pointer min-w-0"
+                  >
+                    <div className="flex-shrink-0">
+                      {avatarUrl ? (
+                        <div className="relative w-14 h-14 md:w-16 md:h-16 rounded-sm overflow-hidden">
+                          <div className="absolute inset-0 border border-ghoul-red/80 z-10 pointer-events-none" />
+                          <div className="absolute inset-0 ring-1 ring-ghoul-red/30 ring-offset-1 ring-offset-black z-10 pointer-events-none" />
+                          <img src={avatarUrl} alt={u.name} className="w-full h-full object-cover" />
+                        </div>
+                      ) : (
+                        <div className="w-14 h-14 md:w-16 md:h-16 bg-[#111] border border-[#333] flex items-center justify-center rounded-sm text-ghoul-muted text-xl font-mono">
+                          {u.name.slice(0, 1)}
+                        </div>
+                      )}
+                    </div>
+                    <div className="min-w-0 flex-1">
+                      <div className="text-base md:text-lg font-bold tracking-wider text-white truncate">{u.name}</div>
+                      <div className="text-[11px] md:text-xs text-ghoul-muted line-clamp-3 leading-snug mt-0.5">
+                        {summary || '（无描述）'}
+                      </div>
+                    </div>
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+        )}
+
+        {/* 分隔线：当上方预设区显示时，让下方"手动建档"形成视觉分组 */}
+        {users.length > 0 && (
+          <div className="flex items-center gap-3 text-ghoul-muted/40 -my-1">
+            <span className="flex-1 border-t border-[#222]" />
+            <span className="text-[10px] tracking-widest uppercase">或手动建档</span>
+            <span className="flex-1 border-t border-[#222]" />
+          </div>
+        )}
 
         {/* 姓名输入 */}
         <div className="flex flex-col gap-2">

@@ -175,6 +175,22 @@ export interface RegexScript {
   updatedAt?: number;
 }
 
+/** One metric in a player's custom status bar. */
+export interface StatusBarMetric {
+  /** Variable key in chat.variables for the current value. */
+  key: string;
+  /** Display label (Chinese / English / icon-only OK). */
+  label: string;
+  /** Optional max value for bar normalisation; default 100. Ignored when kind==='text'. */
+  max?: number;
+  /** Tailwind bg-* utility for the filled portion of the bar. */
+  color?: string;
+  /** Lucide icon name (heart, skull, eye, …) — resolved at render time. */
+  icon?: string;
+  /** Render mode: 'bar' (default, 0-max fill) or 'text' (label + raw value). */
+  kind?: 'bar' | 'text';
+}
+
 /** Player persona — name + description + starting variables. Multiple profiles can be
  *  saved; one is "active" and feeds the prompt's `personaDescription` channel + default
  *  userName for new chats. */
@@ -183,6 +199,10 @@ export interface UserProfile {
   name: string;
   description?: string;
   initialVariables?: Record<string, string | number>;
+  /** Asset URL or `asset:<key>` sentinel resolved by the avatar registry. */
+  avatar?: string;
+  /** Custom status bar; when present overrides the default 4-metric layout. */
+  statusBar?: StatusBarMetric[];
   createdAt: number;
   updatedAt: number;
 }

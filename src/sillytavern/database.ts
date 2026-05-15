@@ -7,7 +7,7 @@ import type { Lorebook, ChatPreset, AppSettings, ChatSession, UserProfile, Regex
 import { DEFAULT_SETTINGS, DEFAULT_FORMAT_PROMPT } from './types';
 
 const DB_NAME = 'SillyTavernWebDB';
-const DB_VERSION = 11;
+const DB_VERSION = 12;
 
 // Old format prompt strings shipped before the current default; if a stored template
 // matches any of these (i.e. the user never customised it), we silently bump it to the
@@ -200,6 +200,53 @@ const PRIOR_DEFAULT_FORMAT_PROMPTS: string[] = [
 - add 的字段名要尽量复用上方表格里的列名，确保后续可被 update。`,
 ];
 
+/** Preset character: 郡（こおり）/桑折. Seeded once in v12 migration so it
+ *  also shows up in the USERS panel and on the character-creation screen.
+ *  The `avatar: 'asset:koori'` sentinel is resolved by avatar-registry.ts at
+ *  render time, so the IndexedDB row doesn't go stale across builds. */
+const SEEDED_KOORI: UserProfile = {
+  id: 'seed-koori-2026',
+  name: '郡',
+  avatar: 'asset:koori',
+  description: `名字：郡（こおり） · 本名：桑折
+身份：特等搜查官 / 原初喰种 / Youtube 音乐博主"氷チャン"
+种族：人类（伪装）/ 喰种（龙）
+危险等级：S+（青铜树伪装期）/ SSSS·"龙"（本体）
+库因克：是生灭法（SSS·手枪）/ 阿鼻叫唤（SSS+·伞骨内太刀）/ 无我梦中（SSSS·长枪）
+赫子：四种赫子混合的单赫眼，赫眼宝石状位于左侧
+
+外貌：身高 180cm·体重 66kg，身材修长瘦削，平胸。冷酷面庞、金瞳红瞳孔、右眼下一颗痣，五官精致睫毛长。白色中长发带根呆毛，右鬓别耳后，左鬓黑色。上下各两颗虎牙非常尖。
+服装：工作时黑色毛领大衣内搭白衬衫，扣子从不好好扣；私下长风衣 + 高领毛衣，跟季节换；青铜树时黑色无袖紧身背心 + 纯色面具。
+
+性格：以"オレ"自称、氛围特殊、吊儿郎当；只要有趣就去做。已记不得名字所以自己起了好记的；靠吞食同胞活到今天。
+喜好：高槻泉狂热粉、深爱芳村艾特（可以为其献命）；重力系阴暗 stk 读者；喜欢焦糖；抽 Black Devil；不同季节换不同香水；超有钱，住东京最贵地段豪宅 + 一整栋市区古董楼。
+作为青铜树成员时见到艾特会无视或刻薄地讲话。后期战役中用自己的细胞重构了艾特缺损的肉体；龙战后与芳村艾特结婚，更名芳村桑折，加入 TCG 负责剿灭龙种。`,
+  initialVariables: {
+    faction: 'custom',
+    identity: '特等搜查官 / 原初喰种',
+    gender: 'female',
+    height: '180cm',
+    rcLevel: 8000,
+    dragonForm: 0,
+    eitoAffinity: 100,
+    caramel: 100,
+    quinqueAffinity: 100,
+    sanity: 75,
+    suspicion: 0,
+    currentOrg: 'CCG',
+    location: '20区',
+    time: '23:45',
+  },
+  statusBar: [
+    { key: 'rcLevel', label: 'Rc细胞', max: 8000, color: 'bg-red-600', icon: 'HeartPulse' },
+    { key: 'dragonForm', label: '龙形觉醒', max: 100, color: 'bg-amber-500', icon: 'Flame' },
+    { key: 'caramel', label: '焦糖储备', max: 100, color: 'bg-yellow-600', icon: 'Coffee' },
+    { key: 'eitoAffinity', label: '艾特好感', max: 100, color: 'bg-pink-500', icon: 'Heart' },
+  ],
+  createdAt: Date.now(),
+  updatedAt: Date.now(),
+};
+
 class AppDatabase extends Dexie {
   lorebooks!: Table<Lorebook>;
   presets!: Table<ChatPreset>;
@@ -369,6 +416,20 @@ class AppDatabase extends Dexie {
       chats: 'id, name, updatedAt',
       users: 'id, name, updatedAt',
       regexes: 'id, scriptName, updatedAt',
+    });
+    this.version(12).stores({
+      lorebooks: 'id, name, updatedAt',
+      presets: 'id, name, updatedAt',
+      settings: 'key',
+      chats: 'id, name, updatedAt',
+      users: 'id, name, updatedAt',
+      regexes: 'id, scriptName, updatedAt',
+    }).upgrade(async (tx) => {
+      // One-time seed of the 郡（こおり）/桑折 preset character.
+      const existing = await tx.table('users').get(SEEDED_KOORI.id);
+      if (!existing) {
+        await tx.table('users').put(SEEDED_KOORI);
+      }
     });
   }
 }

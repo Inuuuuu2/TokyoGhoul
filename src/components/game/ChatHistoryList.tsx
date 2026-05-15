@@ -5,6 +5,7 @@ import { ThinkingFold } from "../SillyTavern/ThinkingFold";
 import type { RegexScript } from "../../sillytavern/types";
 import { applyDisplayRules } from "../../sillytavern/regex-engine";
 import { sanitizeHtml } from "../../sillytavern/html-render";
+import { resolveAvatar } from "../../sillytavern/avatar-registry";
 
 interface ChatHistoryListProps {
   messages: any[];
@@ -14,6 +15,29 @@ interface ChatHistoryListProps {
   userName: string;
   characterName: string;
   regexes?: RegexScript[];
+  /** Active user profile's avatar (asset:* sentinel or URL). */
+  userAvatar?: string;
+}
+
+/** Decorative framed avatar for user messages. Falls back to the default
+ *  Lucide User icon when no avatar URL resolves. */
+function UserAvatar({ src }: { src?: string }) {
+  const url = resolveAvatar(src);
+  if (!url) {
+    return (
+      <div className="w-8 h-8 md:w-12 md:h-12 bg-[#111] border border-[#333] flex items-center justify-center rounded-sm overflow-hidden shadow-lg shadow-black/50">
+        <User className="text-ghoul-muted w-4 h-4 md:w-6 md:h-6" />
+      </div>
+    );
+  }
+  return (
+    <div className="relative w-8 h-8 md:w-12 md:h-12 rounded-sm overflow-hidden shadow-lg shadow-black/50">
+      {/* 双层框：内层暗红描边 + 外层斜角红光 */}
+      <div className="absolute inset-0 border border-ghoul-red/80 z-10 pointer-events-none" />
+      <div className="absolute inset-0 ring-1 ring-ghoul-red/30 ring-offset-1 ring-offset-black z-10 pointer-events-none" />
+      <img src={url} alt="user" className="w-full h-full object-cover" />
+    </div>
+  );
 }
 
 /** Run plain text through enabled display regexes, then sanitize the resulting
@@ -38,6 +62,7 @@ export function ChatHistoryList({
   userName,
   characterName,
   regexes = [],
+  userAvatar,
 }: ChatHistoryListProps) {
   // Precompute the total floor count once so depth derivation below is cheap.
   const total = messages.length;
@@ -97,8 +122,14 @@ export function ChatHistoryList({
             key={msg.id}
             className={`flex gap-2 md:gap-4 ${isUser ? 'flex-row-reverse' : 'flex-row'}`}
           >
-            <div className="flex-shrink-0 w-8 h-8 md:w-12 md:h-12 bg-[#111] border border-[#333] flex items-center justify-center rounded-sm overflow-hidden shadow-lg shadow-black/50">
-              {isUser ? <User className="text-ghoul-muted w-4 h-4 md:w-6 md:h-6" /> : <Skull className="text-ghoul-red w-4 h-4 md:w-6 md:h-6" />}
+            <div className="flex-shrink-0">
+              {isUser ? (
+                <UserAvatar src={userAvatar} />
+              ) : (
+                <div className="w-8 h-8 md:w-12 md:h-12 bg-[#111] border border-[#333] flex items-center justify-center rounded-sm overflow-hidden shadow-lg shadow-black/50">
+                  <Skull className="text-ghoul-red w-4 h-4 md:w-6 md:h-6" />
+                </div>
+              )}
             </div>
 
             <div className={`flex flex-col max-w-[88%] md:max-w-[85%] ${isUser ? 'items-end' : 'items-start'}`}>

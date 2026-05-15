@@ -64,6 +64,11 @@ export function GameView() {
   };
 
   const handleCreationComplete = async (data: CreationData) => {
+    // 如果选了预设角色，先把对应 user 设为激活，让后续 personaDescription /
+    // 头像 / 状态栏 配置都从该 user 拉。
+    if (data.presetUserId) {
+      await st.switchUser(data.presetUserId);
+    }
     // 建立新存档并初始化录入的数据
     await st.createChat(`轮回 - ${data.name}`, {
       userName: data.name,
@@ -133,6 +138,8 @@ export function GameView() {
         sanity={sanity}
         time={time}
         location={location}
+        metrics={st.activeUser?.statusBar}
+        variables={st.activeChat?.variables}
       />
 
       {/* 控制菜单 */}
@@ -222,6 +229,7 @@ export function GameView() {
               userName={st.activeChat?.userName || 'You'}
               characterName={st.activeChat?.characterName || 'Storyteller'}
               regexes={st.regexes}
+              userAvatar={st.activeUser?.avatar}
             />
           </div>
 

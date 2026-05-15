@@ -1,9 +1,9 @@
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { createContext, useCallback, useContext, useEffect, useMemo, useState, type ReactNode } from 'react';
 import { useStreamParser } from './useStreamParser';
 import { useApiRouter } from './useApiRouter';
 import { applyParsedToChat } from '../sillytavern/variables';
 import { assemblePrompt } from '../sillytavern/prompt-assembler';
-import { applyMemoryPatch } from '../sillytavern/memory-engine';
+import { applyMemoryPatch, type MemorySequences } from '../sillytavern/memory-engine';
 import type { MemoryEntry } from '../sillytavern/types';
 import {
   DEFAULT_TAGS,
@@ -35,7 +35,7 @@ import { createDefaultPreset } from '../sillytavern/types';
 
 const db = getDatabase();
 
-export function useSillytavern() {
+function useSillytavernImpl() {
   // ---- core state ----
   const [settings, setSettings] = useState<AppSettings | null>(null);
   const [presets, setPresets] = useState<ChatPreset[]>([]);
@@ -348,7 +348,10 @@ export function useSillytavern() {
         id: assistantMsgId,
         role: 'assistant',
         content: events
-          .filter((e) => e.type === 'tag-chunk' || e.type === 'raw')
+          .filter((e) =>
+            e.type === 'raw' ||
+            (e.type === 'tag-chunk' && e.tag !== 'memory' && e.tag !== 'vars' && e.tag !== 'thinking' && e.tag !== 'think')
+          )
           .map((e: any) => e.chunk)
           .join(''),
         timestamp: Date.now(),
@@ -356,16 +359,17 @@ export function useSillytavern() {
         variablesAfter: snapshot,
         apiUsed: 'primary',
       };
-      const nextMemories = applyMemoryPatch(
+      const { memories: nextMemories, sequences: nextSequences } = applyMemoryPatch(
         updatedChat.memories ?? [],
         parsed.memoryPatch,
-        { sourceMessageId: assistantMsgId },
+        { sourceMessageId: assistantMsgId, sequences: updatedChat.memorySequences },
       );
       const finalChat: ChatSession = {
         ...updatedChat,
         messages: [...updatedChat.messages, assistantMsg],
         variables: nextVariables,
         memories: nextMemories,
+        memorySequences: nextSequences,
         updatedAt: Date.now(),
       };
       await db.chats.put(finalChat);
@@ -430,11 +434,12 @@ export function useSillytavern() {
   );
 
   const setChatMemories = useCallback(
-    async (memories: MemoryEntry[]) => {
+    async (memories: MemoryEntry[], sequences?: MemorySequences) => {
       if (!activeChat) return;
       const next: ChatSession = {
         ...activeChat,
         memories,
+        memorySequences: sequences ?? activeChat.memorySequences,
         updatedAt: Date.now(),
       };
       await db.chats.put(next);
@@ -509,4 +514,21 @@ export function useSillytavern() {
     toast,
     showToast,
   };
+}
+
+export type SillytavernContextValue = ReturnType<typeof useSillytavernImpl>;
+
+const SillytavernContext = createContext<SillytavernContextValue | null>(null);
+
+export function SillytavernProvider({ children }: { children: ReactNode }) {
+  const value = useSillytavernImpl();
+  return <SillytavernContext.Provider value={value}>{children}</SillytavernContext.Provider>;
+}
+
+export function useSillytavern(): SillytavernContextValue {
+  const ctx = useContext(SillytavernContext);
+  if (!ctx) {
+    throw new Error('useSillytavern must be used inside <SillytavernProvider>');
+  }
+  return ctx;
 }

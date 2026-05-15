@@ -244,6 +244,8 @@ export interface ChatSession {
   lorebookIds: string[];
   variables: Record<string, any>;
   memories?: MemoryEntry[];
+  /** Per-table monotonic counter so deleted IDs are never reused. */
+  memorySequences?: Partial<Record<MemoryTable, number>>;
   createdAt: number;
   updatedAt: number;
 }

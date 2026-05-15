@@ -1,12 +1,14 @@
 import { useMemo, useState } from 'react';
 import { useSillytavern } from '../../hooks/useSillytavern';
 import { MEMORY_TABLES, MEMORY_TABLE_SCHEMAS } from '../../sillytavern/types';
-import type { MemoryEntry, MemoryTable } from '../../sillytavern/types';
+import type { MemoryTable } from '../../sillytavern/types';
+import { applyMemoryPatch } from '../../sillytavern/memory-engine';
 import { MemoryTableView } from './MemoryTableView';
 
 export function MemoryPanel({ onClose }: { onClose: () => void }) {
   const { activeChat, setChatMemories } = useSillytavern();
   const memories = activeChat?.memories ?? [];
+  const sequences = activeChat?.memorySequences;
   const [activeTab, setActiveTab] = useState<MemoryTable>('characters');
   const [search, setSearch] = useState('');
 
@@ -28,30 +30,21 @@ export function MemoryPanel({ onClose }: { onClose: () => void }) {
   }, [memories, activeTab, search]);
 
   const handleUpdate = async (id: string, fields: Record<string, string>) => {
-    const next = memories.map((m) => (m.id === id ? { ...m, fields, updatedAt: Date.now() } : m));
-    await setChatMemories(next);
+    const result = applyMemoryPatch(memories, { update: { [id]: fields } }, { sequences });
+    await setChatMemories(result.memories, result.sequences);
   };
 
   const handleDelete = async (id: string) => {
     if (!confirm(`删除记忆 ${id}?`)) return;
-    await setChatMemories(memories.filter((m) => m.id !== id));
+    const result = applyMemoryPatch(memories, { delete: [id] }, { sequences });
+    await setChatMemories(result.memories, result.sequences);
   };
 
   const handleAdd = async (table: MemoryTable) => {
     const schema = MEMORY_TABLE_SCHEMAS[table];
-    const existing = memories.filter((m) => m.id.startsWith(schema.idPrefix + '_'));
-    const maxSeq = existing.reduce((max, e) => {
-      const n = Number(e.id.slice(schema.idPrefix.length + 1));
-      return Number.isFinite(n) && n > max ? n : max;
-    }, 0);
-    const newEntry: MemoryEntry = {
-      id: `${schema.idPrefix}_${String(maxSeq + 1).padStart(3, '0')}`,
-      table,
-      fields: Object.fromEntries(schema.columns.map((c) => [c, ''])),
-      createdAt: Date.now(),
-      updatedAt: Date.now(),
-    };
-    await setChatMemories([...memories, newEntry]);
+    const emptyRow = Object.fromEntries(schema.columns.map((c) => [c, '']));
+    const result = applyMemoryPatch(memories, { add: { [table]: [emptyRow] } }, { sequences });
+    await setChatMemories(result.memories, result.sequences);
   };
 
   return (

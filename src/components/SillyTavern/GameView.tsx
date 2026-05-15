@@ -10,6 +10,7 @@ import { SettingsModal } from './SettingsModal';
 import { LorebookModal } from './LorebookModal';
 import { PresetModal } from './PresetModal';
 import { VariablesModal } from './VariablesModal';
+import { MemoryPanel } from './MemoryPanel';
 import { Toast } from './Toast';
 import { Map, User, Heart, Trash2, Home } from "lucide-react";
 import { ChatHistoryList } from "../game/ChatHistoryList";
@@ -139,6 +140,7 @@ export function GameView() {
         <button onClick={() => st.openLorebooks()} className="text-sm font-mono text-ghoul-muted hover:text-white transition-colors">📖 LOREBOOKS [{st.settings?.activeLorebookIds?.length ?? 0}]</button>
         <button onClick={() => st.openPresets()} className="text-sm font-mono text-ghoul-muted hover:text-white transition-colors">✦ PRESETS</button>
         <button onClick={() => st.openVariables()} className="text-sm font-mono text-ghoul-muted hover:text-white transition-colors">📊 VARS [{Object.keys(st.activeChat?.variables ?? {}).length}]</button>
+        <button onClick={() => st.openMemories()} className="text-sm font-mono text-ghoul-muted hover:text-white transition-colors">🧠 MEMORY [{(st.activeChat?.memories ?? []).length}]</button>
         <button disabled={!lastAssistant} onClick={() => st.regenerateLast()} className="text-sm font-mono text-ghoul-muted hover:text-white transition-colors disabled:opacity-30 disabled:cursor-not-allowed">↻ RE-ROLL</button>
         <div className="flex-1" /> {/* Spacer */}
         <button onClick={handleDeleteChat} className="flex items-center gap-1 text-sm font-mono text-ghoul-muted hover:text-ghoul-red transition-colors">
@@ -227,6 +229,7 @@ export function GameView() {
       {st.showLorebooks && <LorebookModal onClose={() => st.setShowLorebooks(false)} />}
       {st.showPresets && <PresetModal onClose={() => st.setShowPresets(false)} />}
       {st.showVariables && <VariablesModal onClose={() => st.setShowVariables(false)} />}
+      {st.showMemories && <MemoryPanel onClose={() => st.setShowMemories(false)} />}
       <Toast message={st.toast} />
 
       {/* NPC 面板模态框 */}

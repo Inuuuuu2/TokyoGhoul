@@ -66,6 +66,6 @@ function applyEvents(prev: StreamParserState, events: ParserEvent[]): StreamPars
 function emptyParsed(): ParsedTags {
   return {
     thinking: '', maintext: '', options: [], sum: '', varsRaw: '',
-    varsCommands: { merge: {} }, unknown: {},
+    varsCommands: { merge: {} }, memoryRaw: '', memoryPatch: {}, unknown: {},
   };
 }

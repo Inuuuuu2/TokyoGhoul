@@ -3,6 +3,8 @@ import { useStreamParser } from './useStreamParser';
 import { useApiRouter } from './useApiRouter';
 import { applyParsedToChat } from '../sillytavern/variables';
 import { assemblePrompt } from '../sillytavern/prompt-assembler';
+import { applyMemoryPatch } from '../sillytavern/memory-engine';
+import type { MemoryEntry } from '../sillytavern/types';
 import {
   DEFAULT_TAGS,
   DEFAULT_OPAQUE_TAGS,
@@ -47,6 +49,7 @@ export function useSillytavern() {
   const [showLorebooks, setShowLorebooks] = useState(false);
   const [showPresets, setShowPresets] = useState(false);
   const [showVariables, setShowVariables] = useState(false);
+  const [showMemories, setShowMemories] = useState(false);
 
   // ---- toast ----
   const [toast, setToast] = useState<string | null>(null);
@@ -318,6 +321,7 @@ export function useSillytavern() {
         characterName: settings.characterName,
         extraVariables: updatedChat.variables,
         formatPrompt: settings.formatPromptTemplate,
+        memories: updatedChat.memories ?? [],
       });
 
       parser.start();
@@ -338,8 +342,9 @@ export function useSillytavern() {
         parsed
       );
 
+      const assistantMsgId = crypto.randomUUID();
       const assistantMsg: ChatMessage = {
-        id: crypto.randomUUID(),
+        id: assistantMsgId,
         role: 'assistant',
         content: events
           .filter((e) => e.type === 'tag-chunk' || e.type === 'raw')
@@ -350,10 +355,16 @@ export function useSillytavern() {
         variablesAfter: snapshot,
         apiUsed: 'primary',
       };
+      const nextMemories = applyMemoryPatch(
+        updatedChat.memories ?? [],
+        parsed.memoryPatch,
+        { sourceMessageId: assistantMsgId },
+      );
       const finalChat: ChatSession = {
         ...updatedChat,
         messages: [...updatedChat.messages, assistantMsg],
         variables: nextVariables,
+        memories: nextMemories,
         updatedAt: Date.now(),
       };
       await db.chats.put(finalChat);
@@ -417,6 +428,20 @@ export function useSillytavern() {
     [activeChat]
   );
 
+  const setChatMemories = useCallback(
+    async (memories: MemoryEntry[]) => {
+      if (!activeChat) return;
+      const next: ChatSession = {
+        ...activeChat,
+        memories,
+        updatedAt: Date.now(),
+      };
+      await db.chats.put(next);
+      setChats((prev) => prev.map((c) => (c.id === next.id ? next : c)));
+    },
+    [activeChat]
+  );
+
   return {
     // state
     settings,
@@ -458,6 +483,7 @@ export function useSillytavern() {
     openLorebooks: () => setShowLorebooks(true),
     openPresets: () => setShowPresets(true),
     openVariables: () => setShowVariables(true),
+    openMemories: () => setShowMemories(true),
 
     // modal states (for binding)
     showSettings,
@@ -468,9 +494,12 @@ export function useSillytavern() {
     setShowPresets,
     showVariables,
     setShowVariables,
+    showMemories,
+    setShowMemories,
 
     // variables
     setChatVariables,
+    setChatMemories,
 
     // toast
     toast,

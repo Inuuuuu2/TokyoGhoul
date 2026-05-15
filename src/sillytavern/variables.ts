@@ -5,6 +5,7 @@
 import type { ChatSession, ParsedTags } from './types';
 import type { ParserEvent } from './stream-parser';
 import { parseVarsBlock, applyVarsPatch } from './vars-merger';
+import { parseMemoryBlock } from './memory-engine';
 
 export function extractVariables(text: string): { cleanedText: string; updates: Record<string, string | number> } {
   const updates: Record<string, string | number> = {};
@@ -81,6 +82,8 @@ export function aggregateEvents(events: ParserEvent[]): ParsedTags {
     sum: '',
     varsRaw: '',
     varsCommands: { merge: {} },
+    memoryRaw: '',
+    memoryPatch: {},
     unknown: {},
   };
   for (const ev of events) {
@@ -91,6 +94,9 @@ export function aggregateEvents(events: ParserEvent[]): ParsedTags {
       else if (ev.tag === 'vars') {
         parsed.varsRaw = ev.full;
         parsed.varsCommands = parseVarsBlock(ev.full);
+      } else if (ev.tag === 'memory') {
+        parsed.memoryRaw = ev.full;
+        parsed.memoryPatch = parseMemoryBlock(ev.full);
       } else if (ev.tag === 'option') {
         // option-line events accumulate options below
       } else {

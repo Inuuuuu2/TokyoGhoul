@@ -2,9 +2,10 @@
  * Prompt Assembler
  */
 
-import type { ChatPreset, Lorebook, ChatMessage, MatchedEntry } from './types';
+import type { ChatPreset, Lorebook, ChatMessage, MatchedEntry, MemoryEntry } from './types';
 import { createLorebookEngine } from './lorebook-engine';
 import { formatVariablesForPrompt } from './variables';
+import { formatMemoriesForPrompt } from './memory-format';
 
 export interface AssembleOptions {
   userInput: string;
@@ -16,6 +17,7 @@ export interface AssembleOptions {
   variables?: Record<string, string | number>;
   extraVariables?: Record<string, any>;
   formatPrompt?: string;
+  memories?: MemoryEntry[];
 }
 
 export interface AssembleResult {
@@ -25,7 +27,7 @@ export interface AssembleResult {
 }
 
 export function assemblePrompt(options: AssembleOptions): AssembleResult {
-  const { userInput, history, preset, lorebooks, userName, characterName, variables, extraVariables, formatPrompt } = options;
+  const { userInput, history, preset, lorebooks, userName, characterName, variables, extraVariables, formatPrompt, memories } = options;
 
   const allMatchedEntries: MatchedEntry[] = [];
   const scanText = userInput + ' ' + history.slice(-3).map(m => m.content).join(' ');
@@ -142,6 +144,11 @@ export function assemblePrompt(options: AssembleOptions): AssembleResult {
       }
       assembledMessages.push({ role, content });
     }
+  }
+
+  const memoriesBlock = formatMemoriesForPrompt(memories);
+  if (memoriesBlock) {
+    systemAccumulator += (systemAccumulator ? '\n\n' : '') + memoriesBlock;
   }
 
   const variablesBlock = formatVariablesForPrompt(variables || {});

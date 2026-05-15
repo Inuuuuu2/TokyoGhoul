@@ -175,9 +175,23 @@ export const DEFAULT_FORMAT_PROMPT = `你必须严格按照以下 XML 标签格�
 选项 B
 选项 C</option>              ← 必填；至少 2 项，每行一个
 <sum>……</sum>               ← 必填；本回合一句话总结
-<vars>{ "金钱": +10, "HP": 38 }</vars>   ← 选填；JSON 深合并`;
+<vars>{ "金钱": +10, "HP": 38 }</vars>   ← 选填；JSON 深合并
+<memory>{                                ← 选填；长期记忆增删改，JSON
+  "add": {
+    "characters": [{ "name": "金木研", "role": "主角", "status": "人类", "relation": "本人", "note": "" }],
+    "events":     [{ "title": "初次相遇", "when": "第1话", "where": "安定区", "summary": "……" }],
+    "places":     [{ "name": "安定区", "type": "咖啡店", "description": "……" }],
+    "items":      [{ "name": "羽口", "owner": "金木研", "description": "赫子武器" }]
+  },
+  "update": { "char_001": { "status": "已变成喰种" } },
+  "delete": ["evt_005"]
+}</memory>
+说明：
+- 长期记忆已在系统消息的 [长期记忆] 部分列出，每行有唯一 ID（如 char_001）。
+- 需要补充新条目用 add；要更新已有条目（如人物状态变化）务必用 update 配合其 ID，不要重复 add。
+- add 的字段名要尽量复用上方表格里的列名，确保后续可被 update。`;
 
-export const DEFAULT_TAGS = ['maintext', 'option', 'sum', 'vars', 'thinking', 'think'] as const;
+export const DEFAULT_TAGS = ['maintext', 'option', 'sum', 'vars', 'memory', 'thinking', 'think'] as const;
 export const DEFAULT_OPAQUE_TAGS = ['thinking', 'think'] as const;
 
 export const DEFAULT_SETTINGS: AppSettings = {
@@ -197,7 +211,7 @@ export const DEFAULT_SETTINGS: AppSettings = {
   autoSave: true,
   autoSaveInterval: 30,
   uiMode: 'game',
-  customTags: ['maintext', 'option', 'sum', 'vars', 'thinking', 'think'],
+  customTags: ['maintext', 'option', 'sum', 'vars', 'memory', 'thinking', 'think'],
   formatPromptTemplate: DEFAULT_FORMAT_PROMPT,
   thinkingDisplay: 'fold',
 };
@@ -229,8 +243,64 @@ export interface ChatSession {
   presetId: string | null;
   lorebookIds: string[];
   variables: Record<string, any>;
+  memories?: MemoryEntry[];
   createdAt: number;
   updatedAt: number;
+}
+
+// ========== Memory Table Types ==========
+
+export type MemoryTable = 'characters' | 'events' | 'places' | 'items';
+
+export interface MemoryEntry {
+  id: string;
+  table: MemoryTable;
+  fields: Record<string, string>;
+  sourceMessageId?: string;
+  createdAt: number;
+  updatedAt: number;
+}
+
+export interface MemoryTableSchema {
+  label: string;
+  idPrefix: string;
+  columns: string[];
+  columnLabels: Record<string, string>;
+}
+
+export const MEMORY_TABLE_SCHEMAS: Record<MemoryTable, MemoryTableSchema> = {
+  characters: {
+    label: '人物',
+    idPrefix: 'char',
+    columns: ['name', 'role', 'status', 'relation', 'note'],
+    columnLabels: { name: '名称', role: '身份', status: '状态', relation: '与主角关系', note: '备注' },
+  },
+  events: {
+    label: '事件',
+    idPrefix: 'evt',
+    columns: ['title', 'when', 'where', 'summary'],
+    columnLabels: { title: '标题', when: '时间', where: '地点', summary: '概要' },
+  },
+  places: {
+    label: '地点',
+    idPrefix: 'loc',
+    columns: ['name', 'type', 'description'],
+    columnLabels: { name: '名称', type: '类型', description: '描述' },
+  },
+  items: {
+    label: '物品',
+    idPrefix: 'item',
+    columns: ['name', 'owner', 'description'],
+    columnLabels: { name: '名称', owner: '持有者', description: '描述' },
+  },
+};
+
+export const MEMORY_TABLES: MemoryTable[] = ['characters', 'events', 'places', 'items'];
+
+export interface MemoryPatch {
+  add?: Partial<Record<MemoryTable, Array<Record<string, string>>>>;
+  update?: Record<string, Record<string, string>>;
+  delete?: string[];
 }
 
 // ========== Constants ==========
@@ -296,6 +366,8 @@ export interface ParsedTags {
   sum: string;
   varsRaw: string;
   varsCommands: VarsPatch;
+  memoryRaw: string;
+  memoryPatch: MemoryPatch;
   unknown: Record<string, string>;
 }
 

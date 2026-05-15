@@ -7,7 +7,7 @@ import type { Lorebook, ChatPreset, AppSettings, ChatSession } from './types';
 import { DEFAULT_SETTINGS } from './types';
 
 const DB_NAME = 'SillyTavernWebDB';
-const DB_VERSION = 3;
+const DB_VERSION = 4;
 
 class AppDatabase extends Dexie {
   lorebooks!: Table<Lorebook>;
@@ -47,6 +47,27 @@ class AppDatabase extends Dexie {
         await tx.table('settings').put(s);
       }
     });
+    this.version(4).stores({
+      lorebooks: 'id, name, updatedAt',
+      presets: 'id, name, updatedAt',
+      settings: 'key',
+      chats: 'id, name, updatedAt',
+    }).upgrade(async tx => {
+      const chats = await tx.table('chats').toCollection().toArray();
+      for (const c of chats) {
+        if (!Array.isArray(c.memories)) {
+          c.memories = [];
+          await tx.table('chats').put(c);
+        }
+      }
+      const settings = await tx.table('settings').toCollection().toArray();
+      for (const s of settings) {
+        if (Array.isArray(s.customTags) && !s.customTags.includes('memory')) {
+          s.customTags = [...s.customTags, 'memory'];
+          await tx.table('settings').put(s);
+        }
+      }
+    });
   }
 }
 
@@ -72,6 +93,26 @@ export async function initializeDatabase(): Promise<void> {
       createdAt: Date.now(),
       updatedAt: Date.now(),
     } as ChatPreset);
+  }
+
+  const lorebookCount = await db.lorebooks.count();
+  if (lorebookCount === 0) {
+    try {
+      const defaultLorebook = (await import('../assets/defaultLorebook.json')).default as unknown as Lorebook;
+      await db.lorebooks.add(defaultLorebook);
+
+      // Auto-enable this lorebook in settings if no settings exist yet
+      const settingsCount = await db.settings.count();
+      if (settingsCount === 0) {
+        await db.settings.put({
+          ...DEFAULT_SETTINGS,
+          key: 'settings',
+          activeLorebookIds: [defaultLorebook.id]
+        });
+      }
+    } catch (e) {
+      console.warn('Failed to load default lorebook:', e);
+    }
   }
 
   const settingsCount = await db.settings.count();

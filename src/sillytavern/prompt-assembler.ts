@@ -2,10 +2,11 @@
  * Prompt Assembler
  */
 
-import type { ChatPreset, Lorebook, ChatMessage, MatchedEntry, MemoryEntry } from './types';
+import type { ChatPreset, Lorebook, ChatMessage, MatchedEntry, MemoryEntry, RegexScript } from './types';
 import { createLorebookEngine } from './lorebook-engine';
 import { formatVariablesForPrompt } from './variables';
 import { formatMemoriesForPrompt } from './memory-format';
+import { applyPromptRules } from './regex-engine';
 
 export interface AssembleOptions {
   userInput: string;
@@ -21,6 +22,9 @@ export interface AssembleOptions {
   extraVariables?: Record<string, any>;
   formatPrompt?: string;
   memories?: MemoryEntry[];
+  /** SillyTavern regex scripts; only entries with promptOnly=true are applied
+   *  (placement 1 → user msgs, placement 2 → assistant msgs). */
+  regexes?: RegexScript[];
 }
 
 export interface AssembleResult {
@@ -30,7 +34,8 @@ export interface AssembleResult {
 }
 
 export function assemblePrompt(options: AssembleOptions): AssembleResult {
-  const { userInput, history, preset, lorebooks, userName, characterName, userDescription, variables, extraVariables, formatPrompt, memories } = options;
+  const { userInput, history, preset, lorebooks, userName, characterName, userDescription, variables, extraVariables, formatPrompt, memories, regexes } = options;
+  const regexRules = regexes ?? [];
 
   const allMatchedEntries: MatchedEntry[] = [];
   const scanText = userInput + ' ' + history.slice(-3).map(m => m.content).join(' ');
@@ -52,9 +57,15 @@ export function assemblePrompt(options: AssembleOptions): AssembleResult {
   for (let i = history.length - 1; i >= 0; i--) {
     const msg = history[i];
     if (msg.role === 'system') continue;
-    const msgTokens = msg.content.length / 4;
+    const depth = history.length - 1 - i;
+    const placementRole = msg.role === 'user' ? 1 : 2;
+    const content =
+      regexRules.length > 0
+        ? applyPromptRules(msg.content, regexRules, { role: placementRole, depth })
+        : msg.content;
+    const msgTokens = content.length / 4;
     if (currentTokens + msgTokens > maxContextTokens * 0.8) break;
-    recentHistory.unshift({ role: msg.role, content: msg.content });
+    recentHistory.unshift({ role: msg.role, content });
     currentTokens += msgTokens;
   }
 
@@ -196,11 +207,15 @@ export function assemblePrompt(options: AssembleOptions): AssembleResult {
     afterHistory.push({ role: 'system', content: formatPrompt });
   }
 
+  const finalUserInput =
+    regexRules.length > 0
+      ? applyPromptRules(userInput, regexRules, { role: 1, depth: 0 })
+      : userInput;
   const assembledMessages = [
     ...beforeHistory,
     ...recentHistory,
     ...afterHistory,
-    { role: 'user' as const, content: userInput },
+    { role: 'user' as const, content: finalUserInput },
   ];
 
   // 如果 prompt_order 完全没出现 chatHistory 标识，recentHistory 已经被上面插入；hasChatHistory 仅用于诊断

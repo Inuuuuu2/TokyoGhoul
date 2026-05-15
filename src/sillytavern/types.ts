@@ -149,6 +149,32 @@ export interface ApiSettings {
   };
 }
 
+/** SillyTavern-compatible regex script.
+ *  Applied either to messages before they are sent to the AI (promptOnly=true)
+ *  or to the display rendering (markdownOnly=true && !promptOnly — NOT YET applied
+ *  in this app; stored for forward-compat only).
+ *  placement values mirror SillyTavern: 1 = user input, 2 = AI output.
+ *  depth is counted from the end (0 = newest); null = unbounded. */
+export interface RegexScript {
+  id: string;
+  scriptName: string;
+  disabled: boolean;
+  runOnEdit?: boolean;
+  /** Pattern; either bare `<math>([\\s\\S]*?)<\\/math>` or wrapped `/pattern/flags`. */
+  findRegex: string;
+  trimStrings: string[];
+  replaceString: string;
+  placement: number[];
+  /** 0 = no macro substitution; 1 = raw; 2 = escaped. Currently treated as 0. */
+  substituteRegex?: number;
+  minDepth?: number | null;
+  maxDepth?: number | null;
+  markdownOnly?: boolean;
+  promptOnly?: boolean;
+  createdAt?: number;
+  updatedAt?: number;
+}
+
 /** Player persona — name + description + starting variables. Multiple profiles can be
  *  saved; one is "active" and feeds the prompt's `personaDescription` channel + default
  *  userName for new chats. */

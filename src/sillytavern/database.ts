@@ -3,11 +3,11 @@
  */
 
 import Dexie, { type Table } from 'dexie';
-import type { Lorebook, ChatPreset, AppSettings, ChatSession, UserProfile } from './types';
+import type { Lorebook, ChatPreset, AppSettings, ChatSession, UserProfile, RegexScript } from './types';
 import { DEFAULT_SETTINGS, DEFAULT_FORMAT_PROMPT } from './types';
 
 const DB_NAME = 'SillyTavernWebDB';
-const DB_VERSION = 10;
+const DB_VERSION = 11;
 
 // Old format prompt strings shipped before the current default; if a stored template
 // matches any of these (i.e. the user never customised it), we silently bump it to the
@@ -206,6 +206,7 @@ class AppDatabase extends Dexie {
   settings!: Table<AppSettings>;
   chats!: Table<ChatSession>;
   users!: Table<UserProfile>;
+  regexes!: Table<RegexScript>;
 
   constructor() {
     super(DB_NAME);
@@ -360,6 +361,14 @@ class AppDatabase extends Dexie {
           await tx.table('settings').put(s);
         }
       }
+    });
+    this.version(11).stores({
+      lorebooks: 'id, name, updatedAt',
+      presets: 'id, name, updatedAt',
+      settings: 'key',
+      chats: 'id, name, updatedAt',
+      users: 'id, name, updatedAt',
+      regexes: 'id, scriptName, updatedAt',
     });
   }
 }
@@ -563,4 +572,21 @@ export async function saveUser(user: UserProfile): Promise<string> {
 
 export async function deleteUser(id: string): Promise<void> {
   await getDatabase().users.delete(id);
+}
+
+export async function getRegexes(): Promise<RegexScript[]> {
+  return getDatabase().regexes.toArray();
+}
+
+export async function saveRegex(r: RegexScript): Promise<string> {
+  await getDatabase().regexes.put(r);
+  return r.id;
+}
+
+export async function deleteRegex(id: string): Promise<void> {
+  await getDatabase().regexes.delete(id);
+}
+
+export async function bulkPutRegexes(list: RegexScript[]): Promise<void> {
+  await getDatabase().regexes.bulkPut(list);
 }

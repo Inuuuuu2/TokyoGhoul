@@ -15,6 +15,7 @@ import {
   type ChatMessage,
   type Lorebook,
   type UserProfile,
+  type RegexScript,
 } from '../sillytavern/types';
 import {
   getDatabase,
@@ -24,15 +25,19 @@ import {
   getSettings,
   getChats,
   getUsers,
+  getRegexes,
   saveLorebook,
   savePreset,
   saveSettings,
   saveChat,
   saveUser,
+  saveRegex,
+  bulkPutRegexes,
   deleteChat,
   deleteLorebook as deleteLorebookDb,
   deletePreset as deletePresetDb,
   deleteUser as deleteUserDb,
+  deleteRegex as deleteRegexDb,
 } from '../sillytavern/database';
 import { createDefaultLorebook } from '../sillytavern/editor-utils';
 import { createDefaultPreset } from '../sillytavern/types';
@@ -46,6 +51,7 @@ function useSillytavernImpl() {
   const [lorebooks, setLorebooks] = useState<Lorebook[]>([]);
   const [chats, setChats] = useState<ChatSession[]>([]);
   const [users, setUsers] = useState<UserProfile[]>([]);
+  const [regexes, setRegexes] = useState<RegexScript[]>([]);
   const [activeChatId, setActiveChatId] = useState<string | null>(null);
   const [initialized, setInitialized] = useState(false);
 
@@ -57,6 +63,7 @@ function useSillytavernImpl() {
   const [showMemories, setShowMemories] = useState(false);
   const [showInspector, setShowInspector] = useState(false);
   const [showUsers, setShowUsers] = useState(false);
+  const [showRegexes, setShowRegexes] = useState(false);
 
   // ---- diagnostic: last assembled messages sent to API ----
   const [lastPromptMessages, setLastPromptMessages] = useState<Array<{ role: string; content: string }> | null>(null);
@@ -87,12 +94,13 @@ function useSillytavernImpl() {
     let cancelled = false;
     (async () => {
       await initializeDatabase();
-      const [l, p, s, c, u] = await Promise.all([
+      const [l, p, s, c, u, r] = await Promise.all([
         getLorebooks(),
         getPresets(),
         getSettings(),
         getChats(),
         getUsers(),
+        getRegexes(),
       ]);
       if (cancelled) return;
       setLorebooks(l);
@@ -100,6 +108,7 @@ function useSillytavernImpl() {
       setSettings(s ? { ...DEFAULT_SETTINGS, ...s } : { ...DEFAULT_SETTINGS });
       setChats(c);
       setUsers(u);
+      setRegexes(r);
       if (c.length > 0) setActiveChatId(c[0].id);
       setInitialized(true);
     })();
@@ -344,6 +353,56 @@ function useSillytavernImpl() {
     });
   }, []);
 
+  // ---- regex scripts ----
+  const updateRegex = useCallback(async (r: RegexScript) => {
+    const next: RegexScript = { ...r, updatedAt: Date.now() };
+    await saveRegex(next);
+    setRegexes((prev) => prev.map((x) => (x.id === next.id ? next : x)));
+  }, []);
+
+  const addRegex = useCallback(async (r: RegexScript) => {
+    const now = Date.now();
+    const next: RegexScript = { ...r, createdAt: r.createdAt ?? now, updatedAt: now };
+    await saveRegex(next);
+    setRegexes((prev) => [...prev, next]);
+    return next;
+  }, []);
+
+  const removeRegex = useCallback(async (id: string) => {
+    await deleteRegexDb(id);
+    setRegexes((prev) => prev.filter((x) => x.id !== id));
+  }, []);
+
+  const importRegexes = useCallback(async (raw: unknown) => {
+    const arr = Array.isArray(raw) ? raw : null;
+    if (!arr) throw new Error('正则文件必须是 JSON 数组');
+    const now = Date.now();
+    const next: RegexScript[] = arr.map((r: any) => ({
+      id: typeof r.id === 'string' ? r.id : crypto.randomUUID(),
+      scriptName: String(r.scriptName ?? '未命名脚本'),
+      disabled: !!r.disabled,
+      runOnEdit: !!r.runOnEdit,
+      findRegex: String(r.findRegex ?? ''),
+      trimStrings: Array.isArray(r.trimStrings) ? r.trimStrings.map(String) : [],
+      replaceString: String(r.replaceString ?? ''),
+      placement: Array.isArray(r.placement) ? r.placement.map((n: any) => Number(n)) : [2],
+      substituteRegex: typeof r.substituteRegex === 'number' ? r.substituteRegex : 0,
+      minDepth: r.minDepth === null || r.minDepth === undefined ? null : Number(r.minDepth),
+      maxDepth: r.maxDepth === null || r.maxDepth === undefined ? null : Number(r.maxDepth),
+      markdownOnly: !!r.markdownOnly,
+      promptOnly: !!r.promptOnly,
+      createdAt: now,
+      updatedAt: now,
+    }));
+    await bulkPutRegexes(next);
+    setRegexes((prev) => {
+      const byId = new Map(prev.map((x) => [x.id, x]));
+      for (const r of next) byId.set(r.id, r);
+      return Array.from(byId.values());
+    });
+    return next.length;
+  }, []);
+
   const switchUser = useCallback(async (id: string | null) => {
     setSettings((prev) => {
       if (!prev) return prev;
@@ -389,6 +448,7 @@ function useSillytavernImpl() {
         extraVariables: baseChat.variables,
         formatPrompt: settings.formatPromptTemplate,
         memories: baseChat.memories ?? [],
+        regexes,
       });
       setLastPromptMessages(messages.map((m) => ({ role: m.role, content: m.content })));
 
@@ -463,7 +523,7 @@ function useSillytavernImpl() {
       await db.chats.put(finalChat);
       setChats((prev) => prev.map((c) => (c.id === finalChat.id ? finalChat : c)));
     },
-    [settings, lorebooks, activePreset, activeUser, parser, router, showToast]
+    [settings, lorebooks, activePreset, activeUser, regexes, parser, router, showToast]
   );
 
   const sendGameMessage = useCallback(
@@ -594,6 +654,7 @@ function useSillytavernImpl() {
     lorebooks,
     chats,
     users,
+    regexes,
     activeChat,
     activePreset,
     activeUser,
@@ -626,6 +687,12 @@ function useSillytavernImpl() {
     removeUser,
     switchUser,
 
+    // regex scripts
+    addRegex,
+    updateRegex,
+    removeRegex,
+    importRegexes,
+
     // v3 game mode
     sendGameMessage,
     jumpToFloor,
@@ -639,6 +706,7 @@ function useSillytavernImpl() {
     openMemories: () => setShowMemories(true),
     openInspector: () => setShowInspector(true),
     openUsers: () => setShowUsers(true),
+    openRegexes: () => setShowRegexes(true),
 
     // diagnostic
     lastPromptMessages,
@@ -658,6 +726,8 @@ function useSillytavernImpl() {
     setShowInspector,
     showUsers,
     setShowUsers,
+    showRegexes,
+    setShowRegexes,
 
     // variables
     setChatVariables,

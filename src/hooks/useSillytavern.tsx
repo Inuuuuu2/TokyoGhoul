@@ -351,19 +351,43 @@ function useSillytavernImpl() {
         parsed
       );
 
+      // 显示用 content：raw + 非 meta 标签内容；保留原始事件顺序
+      const visibleContent = events
+        .filter((e) =>
+          e.type === 'raw' ||
+          (e.type === 'tag-chunk' && e.tag !== 'memory' && e.tag !== 'vars' && e.tag !== 'thinking' && e.tag !== 'think')
+        )
+        .map((e: any) => e.chunk)
+        .join('')
+        .trim();
+
+      // 兜底：如果 AI 完全没生成 <maintext> 也没任何 raw / 其他可见内容，
+      // 至少把 thinking 抬出来当正文，避免出现"空气泡"。
+      let finalParsed = parsed;
+      let finalContent = visibleContent;
+      if (!parsed.maintext.trim() && !visibleContent) {
+        if (parsed.thinking.trim()) {
+          const fallback =
+            `⚠ AI 本回合没有生成 <maintext>，下方是它的思考过程（请重试或点 'PROMPTS' 检查格式硬性铁律）：\n\n${parsed.thinking.trim()}`;
+          finalParsed = { ...parsed, maintext: fallback };
+          finalContent = fallback;
+          console.warn('[sendGameMessage] AI returned thinking only, no maintext. Events:', events);
+          showToast('AI 未生成 <maintext>，已用思考过程兜底显示');
+        } else {
+          finalContent = '⚠ AI 返回了空响应。请检查 API key / 模型可用性 / 控制台日志。';
+          finalParsed = { ...parsed, maintext: finalContent };
+          console.warn('[sendGameMessage] AI returned fully empty response. Events:', events);
+          showToast('AI 返回空响应，请重试或检查 API 配置');
+        }
+      }
+
       const assistantMsgId = crypto.randomUUID();
       const assistantMsg: ChatMessage = {
         id: assistantMsgId,
         role: 'assistant',
-        content: events
-          .filter((e) =>
-            e.type === 'raw' ||
-            (e.type === 'tag-chunk' && e.tag !== 'memory' && e.tag !== 'vars' && e.tag !== 'thinking' && e.tag !== 'think')
-          )
-          .map((e: any) => e.chunk)
-          .join(''),
+        content: finalContent,
         timestamp: Date.now(),
-        parsed,
+        parsed: finalParsed,
         variablesAfter: snapshot,
         apiUsed: 'primary',
       };

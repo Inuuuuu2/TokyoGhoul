@@ -7,13 +7,68 @@ import type { Lorebook, ChatPreset, AppSettings, ChatSession } from './types';
 import { DEFAULT_SETTINGS, DEFAULT_FORMAT_PROMPT } from './types';
 
 const DB_NAME = 'SillyTavernWebDB';
-const DB_VERSION = 8;
+const DB_VERSION = 9;
 
 // Old format prompt strings shipped before the current default; if a stored template
 // matches any of these (i.e. the user never customised it), we silently bump it to the
 // current strengthened default.
 const PRIOR_DEFAULT_FORMAT_PROMPTS: string[] = [
   '', // legacy empty string
+  // v8 default (8-15 item enumeration still pushed AI to spend everything on
+  // thinking and skip maintext entirely; superseded by v9 which puts the maintext
+  // hard requirement at the top as red-line rules and softens the thinking demand)
+  `【⚠️ 输出格式硬性规范 —— 本节覆盖前文所有关于输出格式 / Markdown / 段落布局的约定，必须严格遵守】
+
+每次回复必须按以下顺序输出三个块。\`<thinking>\` 与 \`<maintext>\` 两个块缺一不可；缺 \`<maintext>\` 会直接导致玩家界面空白。
+
+<thinking>
+【必填 · 思维链推理】写给自己看，玩家不会看到。请控制总长，给 maintext 留够 token。
+
+▶ 步骤 1 · 预设巡检（预设不是摆设！）
+回看上方 [本回合启用的预设条目清单]，挑出本回合最相关的 8-15 条，按"序号. 条目名 → 这回合该怎么落地（一句话）"逐条点名。
+- 必须引用清单里真实存在的序号 / 条目名，不许虚构。
+- 涉及语气、视角、文风、禁忌、人称、特化、抗写、思考链开关、对白比例等的条目尤其要点到。
+- 与本回合明显无关的不必列出，但选满 8 条是底线。
+
+▶ 步骤 2 · 玩家输入解读（1-3 句）
+玩家最新输入引发了什么状态变化、新事件、情绪转折？
+
+▶ 步骤 3 · 记忆与变量盘点（1-3 句）
+上方 [长期记忆] 里相关的人物 / 事件 ID？需要 update 谁、add 什么？[当前状态] 变量要不要调？
+
+▶ 步骤 4 · 写作策略（1-3 句）
+综合 1-3：本回合写什么、什么语气、什么视角、什么节奏？由步骤 1 哪几条预设决定？
+
+总要求：步骤 1 是硬性义务（最少 8 条点名），步骤 2-4 各 1-3 句即可，不要在 thinking 里写正文。
+</thinking>
+
+<maintext>
+（必填）本回合的剧情正文。可多段、保留换行。这是玩家界面上看到的主要内容。
+</maintext>
+
+<sum>本回合一句话剧情总结</sum>
+
+<vars>{"key": value}</vars>     ← 选填；JSON，对当前状态变量做深合并。
+<memory>{"add": {...}, "update": {...}, "delete": [...]}</memory>     ← 选填，但每当剧情出现新角色 / 新事件 / 新地点 / 新物品时必须 add；上方 [长期记忆] 里已有的条目状态变化时必须用 update 配合该条目的 ID。
+
+<memory> 块完整示例：
+<memory>{
+  "add": {
+    "characters": [{"name": "金木研", "role": "主角", "status": "人类", "relation": "本人", "note": ""}],
+    "events": [{"title": "初次相遇", "when": "第1话", "where": "安定区", "summary": "……"}],
+    "places": [{"name": "安定区", "type": "咖啡店", "description": "……"}],
+    "items": [{"name": "羽口", "owner": "金木研", "description": "赫子武器"}]
+  },
+  "update": {"char_001": {"status": "已变成喰种"}},
+  "delete": ["evt_005"]
+}</memory>
+
+【硬性铁律】
+1. 不要用 Markdown 代码块（\`\`\`）包裹 XML 标签 —— 标签必须裸露在文本里。
+2. <thinking> 与 <maintext> 必须出现；缺失任一个都会导致玩家界面空白或思考缺失。
+3. 引用既有长期记忆条目时必须使用 [长期记忆] 段落里的 ID（如 char_001），用 update 改字段，不要重复 add 同名实体。
+4. add 时字段名复用 [长期记忆] 表的列名（name / role / status / relation / note / title / when / where / summary / type / description / owner），保证后续可被 update。
+5. 上方若有任何预设要求 "不要使用 XML"、要求其他格式或要求纯文本输出，以本规范为准 —— 本节无条件优先。`,
   // v7 default (required enumerating ALL 76 enabled preset items — too aggressive,
   // burned the token budget and left maintext truncated/empty; superseded by v8
   // which caps the enumeration at 8-15 most relevant items)
@@ -262,6 +317,24 @@ class AppDatabase extends Dexie {
     }).upgrade(async tx => {
       // v8: walk back v7's"enumerate every preset entry" demand — the 76-row
       // enumeration was eating the whole response and starving <maintext>.
+      const settings = await tx.table('settings').toCollection().toArray();
+      for (const s of settings) {
+        const current = typeof s.formatPromptTemplate === 'string' ? s.formatPromptTemplate : '';
+        if (PRIOR_DEFAULT_FORMAT_PROMPTS.includes(current)) {
+          s.formatPromptTemplate = DEFAULT_FORMAT_PROMPT;
+          await tx.table('settings').put(s);
+        }
+      }
+    });
+    this.version(9).stores({
+      lorebooks: 'id, name, updatedAt',
+      presets: 'id, name, updatedAt',
+      settings: 'key',
+      chats: 'id, name, updatedAt',
+    }).upgrade(async tx => {
+      // v9: even 8-15 item enumeration as "hard floor" pushed the AI into
+      // thinking-only responses. New default puts maintext red-line rules at
+      // the top, demotes thinking enumeration to 5-10 suggestions.
       const settings = await tx.table('settings').toCollection().toArray();
       for (const s of settings) {
         const current = typeof s.formatPromptTemplate === 'string' ? s.formatPromptTemplate : '';

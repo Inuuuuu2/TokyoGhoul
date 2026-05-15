@@ -7,13 +7,68 @@ import type { Lorebook, ChatPreset, AppSettings, ChatSession } from './types';
 import { DEFAULT_SETTINGS, DEFAULT_FORMAT_PROMPT } from './types';
 
 const DB_NAME = 'SillyTavernWebDB';
-const DB_VERSION = 7;
+const DB_VERSION = 8;
 
 // Old format prompt strings shipped before the current default; if a stored template
 // matches any of these (i.e. the user never customised it), we silently bump it to the
 // current strengthened default.
 const PRIOR_DEFAULT_FORMAT_PROMPTS: string[] = [
   '', // legacy empty string
+  // v7 default (required enumerating ALL 76 enabled preset items — too aggressive,
+  // burned the token budget and left maintext truncated/empty; superseded by v8
+  // which caps the enumeration at 8-15 most relevant items)
+  `【⚠️ 输出格式硬性规范 —— 本节覆盖前文所有关于输出格式 / Markdown / 段落布局的约定，必须严格遵守】
+
+每次回复必须按以下顺序输出三个块：
+
+<thinking>
+【必填 · 思维链推理】在生成正文之前，在这里逐步推理（写给自己看，玩家不会看到）。
+
+▶ 步骤 1 · 预设巡检（最重要！预设不是摆设！）
+回看上方 [本回合启用的预设条目清单]，逐条点名说明：本回合每一条该如何贯彻。
+格式："序号. 条目名 → 这回合该怎么落地（一句话）"。
+- 必须覆盖清单里全部条目；不相关的也要标"本回合不触发，原因：…"，不能跳过、不能合并、不能写"略"。
+- 不许虚构清单上不存在的条目名。
+
+▶ 步骤 2 · 玩家输入解读
+玩家最新输入引发了什么状态变化、什么新事件、什么情绪转折？
+
+▶ 步骤 3 · 记忆与变量盘点
+上方 [长期记忆] 表里相关的人物 / 事件 ID 有哪些？这次需要 update 谁、add 什么？上方 [当前状态] 变量是否要调整？
+
+▶ 步骤 4 · 写作策略
+综合 1-3，本回合该写什么内容、用什么语气、视角、节奏？哪些预设条目会决定段落结构与措辞？
+
+要求：每一步都必须实打实地填写。步骤 1 的逐条点名是硬性义务，缺一条就算违规。
+</thinking>
+
+<maintext>
+（必填）本回合的剧情正文。可多段、保留换行。这是玩家界面上看到的主要内容。
+</maintext>
+
+<sum>本回合一句话剧情总结</sum>
+
+<vars>{"key": value}</vars>     ← 选填；JSON，对当前状态变量做深合并。
+<memory>{"add": {...}, "update": {...}, "delete": [...]}</memory>     ← 选填，但每当剧情出现新角色 / 新事件 / 新地点 / 新物品时必须 add；上方 [长期记忆] 里已有的条目状态变化时必须用 update 配合该条目的 ID。
+
+<memory> 块完整示例：
+<memory>{
+  "add": {
+    "characters": [{"name": "金木研", "role": "主角", "status": "人类", "relation": "本人", "note": ""}],
+    "events": [{"title": "初次相遇", "when": "第1话", "where": "安定区", "summary": "……"}],
+    "places": [{"name": "安定区", "type": "咖啡店", "description": "……"}],
+    "items": [{"name": "羽口", "owner": "金木研", "description": "赫子武器"}]
+  },
+  "update": {"char_001": {"status": "已变成喰种"}},
+  "delete": ["evt_005"]
+}</memory>
+
+【硬性铁律】
+1. 不要用 Markdown 代码块（\`\`\`）包裹 XML 标签 —— 标签必须裸露在文本里。
+2. <thinking> 与 <maintext> 必须出现；缺失任一个都会导致玩家界面空白或思考缺失。
+3. 引用既有长期记忆条目时必须使用 [长期记忆] 段落里的 ID（如 char_001），用 update 改字段，不要重复 add 同名实体。
+4. add 时字段名复用 [长期记忆] 表的列名（name / role / status / relation / note / title / when / where / summary / type / description / owner），保证后续可被 update。
+5. 上方若有任何预设要求 "不要使用 XML"、要求其他格式或要求纯文本输出，以本规范为准 —— 本节无条件优先。`,
   // v5/v6 default (vague "list a few relevant constraints" — superseded by v7's
   // mandatory per-item checklist walkthrough)
   `【⚠️ 输出格式硬性规范 —— 本节覆盖前文所有关于输出格式 / Markdown / 段落布局的约定，必须严格遵守】
@@ -190,6 +245,23 @@ class AppDatabase extends Dexie {
     }).upgrade(async tx => {
       // Refresh formatPromptTemplate again — v7 introduces the per-item checklist
       // walkthrough requirement so the AI actually consults each preset entry.
+      const settings = await tx.table('settings').toCollection().toArray();
+      for (const s of settings) {
+        const current = typeof s.formatPromptTemplate === 'string' ? s.formatPromptTemplate : '';
+        if (PRIOR_DEFAULT_FORMAT_PROMPTS.includes(current)) {
+          s.formatPromptTemplate = DEFAULT_FORMAT_PROMPT;
+          await tx.table('settings').put(s);
+        }
+      }
+    });
+    this.version(8).stores({
+      lorebooks: 'id, name, updatedAt',
+      presets: 'id, name, updatedAt',
+      settings: 'key',
+      chats: 'id, name, updatedAt',
+    }).upgrade(async tx => {
+      // v8: walk back v7's"enumerate every preset entry" demand — the 76-row
+      // enumeration was eating the whole response and starving <maintext>.
       const settings = await tx.table('settings').toCollection().toArray();
       for (const s of settings) {
         const current = typeof s.formatPromptTemplate === 'string' ? s.formatPromptTemplate : '';

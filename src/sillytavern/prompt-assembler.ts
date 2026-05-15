@@ -182,7 +182,7 @@ export function assemblePrompt(options: AssembleOptions): AssembleResult {
     const checklist =
       `[本回合启用的预设条目清单 · 共 ${enabledPresetItems.length} 条]\n` +
       enabledPresetItems.map((n, i) => `${i + 1}. ${n}`).join('\n') +
-      `\n（<thinking> 第 1 步必须按此清单巡检；不得跳过、不得编造清单外的条目名）`;
+      `\n（<thinking> 第 1 步从中挑出 8-15 条最相关的逐条点名；引用必须用清单里真实存在的序号与条目名，不许虚构）`;
     afterHistory.push({ role: 'system', content: checklist });
   }
 

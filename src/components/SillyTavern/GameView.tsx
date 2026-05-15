@@ -214,13 +214,14 @@ export function GameView() {
         {/* 右侧：聊天记录与交互 */}
         <div className="flex-1 min-h-0 flex flex-col relative">
           <div className="flex-1 min-h-0 overflow-y-auto space-y-4 md:space-y-6 scroll-smooth pr-2 md:pr-4 pb-4 font-serif">
-            <ChatHistoryList 
-              messages={st.activeChat?.messages ?? []} 
-              isStreaming={isStreaming} 
-              display={display} 
-              settings={st.settings} 
-              userName={st.activeChat?.userName || 'You'} 
-              characterName={st.activeChat?.characterName || 'Storyteller'} 
+            <ChatHistoryList
+              messages={st.activeChat?.messages ?? []}
+              isStreaming={isStreaming}
+              display={display}
+              settings={st.settings}
+              userName={st.activeChat?.userName || 'You'}
+              characterName={st.activeChat?.characterName || 'Storyteller'}
+              regexes={st.regexes}
             />
           </div>
 

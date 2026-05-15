@@ -1,6 +1,10 @@
 import { motion } from "framer-motion";
+import { useMemo } from "react";
 import { User, Skull, Loader2 } from "lucide-react";
 import { ThinkingFold } from "../SillyTavern/ThinkingFold";
+import type { RegexScript } from "../../sillytavern/types";
+import { applyDisplayRules } from "../../sillytavern/regex-engine";
+import { sanitizeHtml } from "../../sillytavern/html-render";
 
 interface ChatHistoryListProps {
   messages: any[];
@@ -9,6 +13,21 @@ interface ChatHistoryListProps {
   settings: any;
   userName: string;
   characterName: string;
+  regexes?: RegexScript[];
+}
+
+/** Run plain text through enabled display regexes, then sanitize the resulting
+ *  HTML. Returns null if no display rule actually changed anything (so the
+ *  caller can fall back to plain `whitespace-pre-wrap` rendering). */
+function renderMaintext(
+  raw: string,
+  regexes: RegexScript[],
+  depth: number,
+): { html: string } | null {
+  if (!raw || regexes.length === 0) return null;
+  const transformed = applyDisplayRules(raw, regexes, { depth });
+  if (transformed === raw) return null;
+  return { html: sanitizeHtml(transformed) };
 }
 
 export function ChatHistoryList({
@@ -17,8 +36,19 @@ export function ChatHistoryList({
   display,
   settings,
   userName,
-  characterName
+  characterName,
+  regexes = [],
 }: ChatHistoryListProps) {
+  // Precompute the total floor count once so depth derivation below is cheap.
+  const total = messages.length;
+
+  // Streaming-phantom rendering uses depth 0 (newest); also memoize sanitized output.
+  const streamRendered = useMemo(() => {
+    if (!isStreaming) return null;
+    const text = display.maintext || display.raw || '';
+    return renderMaintext(text, regexes, 0);
+  }, [isStreaming, display.maintext, display.raw, regexes]);
+
   if (messages.length === 0 && !isStreaming) {
     return (
       <div className="text-center text-ghoul-muted mt-20 opacity-50">
@@ -35,11 +65,11 @@ export function ChatHistoryList({
         const isStreamingThis = isLast && isStreaming;
         const isUser = msg.role === 'user';
         const name = isUser ? userName : characterName;
-        
+
         let textContent = msg.content;
         let thinking = '';
         let summary = '';
-        
+
         if (msg.role === 'assistant') {
           if (isStreamingThis) {
             textContent = display.maintext;
@@ -50,6 +80,14 @@ export function ChatHistoryList({
             thinking = msg.parsed.thinking || '';
             summary = msg.parsed.sum || '';
           }
+        }
+
+        // Apply display rules only for assistant messages, not streaming-phantom
+        // (which is rendered separately below), not user messages.
+        let rendered: { html: string } | null = null;
+        if (msg.role === 'assistant' && !isStreamingThis && textContent) {
+          const depth = total - 1 - idx;
+          rendered = renderMaintext(textContent, regexes, depth);
         }
 
         return (
@@ -71,10 +109,17 @@ export function ChatHistoryList({
                   <ThinkingFold text={thinking} mode={settings?.thinkingDisplay ?? 'fold'} />
                 )}
 
-                <div className="st-maintext whitespace-pre-wrap leading-relaxed text-[15px] md:text-lg">
-                  {textContent}
-                  {isStreamingThis && <span className="st-cursor">▍</span>}
-                </div>
+                {rendered ? (
+                  <div
+                    className="st-maintext st-rich leading-relaxed text-[15px] md:text-lg"
+                    dangerouslySetInnerHTML={{ __html: rendered.html }}
+                  />
+                ) : (
+                  <div className="st-maintext whitespace-pre-wrap leading-relaxed text-[15px] md:text-lg">
+                    {textContent}
+                    {isStreamingThis && <span className="st-cursor">▍</span>}
+                  </div>
+                )}
 
                 {!isUser && summary && (
                   <div className="mt-3 md:mt-4 pt-2 md:pt-3 border-t border-[#333]/50 text-[11px] md:text-xs text-ghoul-muted/70 font-sans bg-black/20 -mx-3 md:-mx-4 -mb-3 md:-mb-4 p-3 md:p-4 rounded-b-sm">
@@ -117,7 +162,12 @@ export function ChatHistoryList({
                 </div>
               )}
 
-              {(display.maintext || display.raw) ? (
+              {streamRendered ? (
+                <div
+                  className="st-maintext st-rich leading-relaxed text-[15px] md:text-lg"
+                  dangerouslySetInnerHTML={{ __html: streamRendered.html }}
+                />
+              ) : (display.maintext || display.raw) ? (
                 <div className="st-maintext whitespace-pre-wrap leading-relaxed text-[15px] md:text-lg">
                   {display.maintext || display.raw}
                   <span className="st-cursor">▍</span>

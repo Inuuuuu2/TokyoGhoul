@@ -37,7 +37,7 @@ function classifyRule(r: RegexScript): { label: string; color: string; effective
     return { label: `Prompt · ${placement}`, color: 'text-ghoul-red', effective: true };
   }
   if (isDisplayRule(r)) {
-    return { label: 'Display · 暂不生效', color: 'text-purple-300', effective: false };
+    return { label: 'Display', color: 'text-purple-300', effective: true };
   }
   return { label: '其它', color: 'text-ghoul-muted', effective: false };
 }
@@ -47,16 +47,27 @@ export function RegexModal({ onClose }: { onClose: () => void }) {
   const fileInputRef = useRef<HTMLInputElement | null>(null);
   const [expandedId, setExpandedId] = useState<string | null>(null);
 
-  const handleImportClick = () => fileInputRef.current?.click();
+  const handleImportClick = () => {
+    console.log('[RegexModal] open file picker');
+    fileInputRef.current?.click();
+  };
 
   const handleFile = async (file: File | undefined) => {
-    if (!file) return;
+    console.log('[RegexModal] handleFile called, file:', file);
+    if (!file) {
+      console.warn('[RegexModal] no file selected');
+      return;
+    }
     try {
       const text = await file.text();
+      console.log('[RegexModal] file size:', text.length);
       const data = JSON.parse(text);
+      console.log('[RegexModal] parsed, rules:', Array.isArray(data) ? data.length : 'NOT ARRAY');
       const n = await importRegexes(data);
+      console.log('[RegexModal] imported', n);
       showToast(`已导入 ${n} 条正则脚本`);
     } catch (e) {
+      console.error('[RegexModal] import error:', e);
       alert('导入失败：' + (e as Error).message);
     } finally {
       if (fileInputRef.current) fileInputRef.current.value = '';
@@ -114,22 +125,24 @@ export function RegexModal({ onClose }: { onClose: () => void }) {
       onClick={onClose}
       className="fixed inset-0 z-[200] bg-black/60 backdrop-blur-sm flex items-center justify-center p-3 md:p-6"
     >
-      <input
-        ref={fileInputRef}
-        type="file"
-        accept=".json,application/json"
-        className="hidden"
-        onChange={(e) => handleFile(e.target.files?.[0])}
-      />
       <div
         onClick={(e) => e.stopPropagation()}
         className="bg-ghoul-dark border border-ghoul-red/40 rounded-sm w-full max-w-[900px] h-[85vh] flex flex-col overflow-hidden shadow-2xl shadow-black/80"
       >
+        {/* 隐藏 file 输入框必须在 stopPropagation 容器内，
+            否则合成 click 会冒泡到 backdrop 把 modal 关掉。 */}
+        <input
+          ref={fileInputRef}
+          type="file"
+          accept=".json,application/json"
+          className="hidden"
+          onChange={(e) => handleFile(e.target.files?.[0])}
+        />
         <header className="flex items-center gap-3 px-4 md:px-5 py-3 border-b border-[#222] bg-[#0a0a0c]">
           <span className="text-ghoul-red font-mono text-sm md:text-base">🔧</span>
           <h2 className="font-mono tracking-[0.3em] text-sm md:text-base text-ghoul-text">正则脚本</h2>
           <span className="text-[10px] font-mono text-ghoul-muted">
-            生效 Prompt: {promptCount} · Display 待支持: {displayCount}
+            生效 Prompt: {promptCount} · Display: {displayCount}
           </span>
           <span className="flex-1" />
           <button
@@ -320,8 +333,8 @@ export function RegexModal({ onClose }: { onClose: () => void }) {
                     </div>
                     {!meta.effective && (
                       <div className="text-[11px] text-yellow-500/80 leading-relaxed">
-                        ⚠ 当前规则属于 Display 渲染类（promptOnly=false + markdownOnly=true），本版本仅
-                        存储不执行；想让它生效，请把 promptOnly 勾上、或等待后续 HTML 渲染上线。
+                        ⚠ 当前规则既不是 Prompt 类也不是 Display 类（placement 或开关未勾选），
+                        请检查 promptOnly / markdownOnly / placement 设置。
                       </div>
                     )}
                   </div>

@@ -82,9 +82,29 @@ export function applyPromptRules(
   return out;
 }
 
-/** Returns true if the given rule is a display-only rule (handled by future UI render). */
+/** Returns true if the given rule is a display-only rule (renders to HTML). */
 export function isDisplayRule(rule: RegexScript): boolean {
   return !!rule.markdownOnly && !rule.promptOnly;
+}
+
+/** Apply all enabled display rules in order. Used by the UI when rendering the
+ *  assistant maintext. Only rules with markdownOnly=true && !promptOnly run here,
+ *  filtered by placement (always 2 for AI display) and depth bounds. */
+export function applyDisplayRules(
+  text: string,
+  rules: RegexScript[],
+  ctx: { depth: number },
+): string {
+  let out = text;
+  for (const rule of rules) {
+    if (rule.disabled) continue;
+    if (!isDisplayRule(rule)) continue;
+    if (!Array.isArray(rule.placement) || !rule.placement.includes(2)) continue;
+    if (typeof rule.minDepth === 'number' && ctx.depth < rule.minDepth) continue;
+    if (typeof rule.maxDepth === 'number' && ctx.depth > rule.maxDepth) continue;
+    out = applyRule(out, rule);
+  }
+  return out;
 }
 
 /** Returns true if the given rule is a prompt-history rule (handled here). */

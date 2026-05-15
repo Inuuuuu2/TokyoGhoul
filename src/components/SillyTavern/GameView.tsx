@@ -13,6 +13,7 @@ import { VariablesModal } from './VariablesModal';
 import { MemoryPanel } from './MemoryPanel';
 import { PromptTogglePanel } from './PromptTogglePanel';
 import { PromptInspector } from './PromptInspector';
+import { UserModal } from './UserModal';
 import { Toast } from './Toast';
 import { Map, User, Heart, Trash2, Home } from "lucide-react";
 import { ChatHistoryList } from "../game/ChatHistoryList";
@@ -141,6 +142,7 @@ export function GameView() {
         </button>
         <button onClick={() => setHistoryOpen(true)} className="text-xs md:text-sm font-mono text-ghoul-muted hover:text-white active:text-white transition-colors">☰ HISTORY [{st.activeChat?.messages?.length ?? 0}]</button>
         <button onClick={() => st.openSettings()} className="text-xs md:text-sm font-mono text-ghoul-muted hover:text-white active:text-white transition-colors">⚙ SETTINGS</button>
+        <button onClick={() => st.openUsers()} className="text-xs md:text-sm font-mono text-ghoul-muted hover:text-white active:text-white transition-colors" title={st.activeUser ? `当前: ${st.activeUser.name}` : '尚未选择用户'}>👤 USERS [{st.users.length}]{st.activeUser ? ` · ${st.activeUser.name}` : ''}</button>
         <button onClick={() => st.openLorebooks()} className="text-xs md:text-sm font-mono text-ghoul-muted hover:text-white active:text-white transition-colors">📖 LOREBOOKS [{st.settings?.activeLorebookIds?.length ?? 0}]</button>
         <button onClick={() => st.openPresets()} className="text-xs md:text-sm font-mono text-ghoul-muted hover:text-white active:text-white transition-colors">✦ PRESETS</button>
         <button onClick={() => st.openPromptToggle()} className="text-xs md:text-sm font-mono text-ghoul-muted hover:text-white active:text-white transition-colors">📚 PROMPTS</button>
@@ -246,6 +248,7 @@ export function GameView() {
       {st.showMemories && <MemoryPanel onClose={() => st.setShowMemories(false)} />}
       {st.showPromptToggle && <PromptTogglePanel onClose={() => st.setShowPromptToggle(false)} />}
       {st.showInspector && <PromptInspector onClose={() => st.setShowInspector(false)} />}
+      {st.showUsers && <UserModal onClose={() => st.setShowUsers(false)} />}
       <Toast message={st.toast} />
 
       {/* NPC 面板模态框 */}

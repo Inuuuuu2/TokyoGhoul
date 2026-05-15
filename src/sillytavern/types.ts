@@ -149,6 +149,18 @@ export interface ApiSettings {
   };
 }
 
+/** Player persona — name + description + starting variables. Multiple profiles can be
+ *  saved; one is "active" and feeds the prompt's `personaDescription` channel + default
+ *  userName for new chats. */
+export interface UserProfile {
+  id: string;
+  name: string;
+  description?: string;
+  initialVariables?: Record<string, string | number>;
+  createdAt: number;
+  updatedAt: number;
+}
+
 export interface AppSettings {
   key?: string;
   api: ApiSettings;
@@ -156,6 +168,9 @@ export interface AppSettings {
   apiMode: 'single' | 'dual';
   activePresetId: string | null;
   activeLorebookIds: string[];
+  /** Selected UserProfile id. When set, new chats default to this profile's name and
+   *  the assembled prompt's `personaDescription` slot uses the profile description. */
+  activeUserId: string | null;
   userName: string;
   characterName: string;
   theme: 'dark' | 'light';
@@ -229,6 +244,7 @@ export const DEFAULT_SETTINGS: AppSettings = {
   apiMode: 'single',
   activePresetId: null,
   activeLorebookIds: [],
+  activeUserId: null,
   userName: '用户',
   characterName: 'AI',
   theme: 'dark',

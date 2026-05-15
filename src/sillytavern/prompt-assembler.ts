@@ -14,6 +14,9 @@ export interface AssembleOptions {
   lorebooks: Lorebook[];
   userName: string;
   characterName: string;
+  /** Active user profile's description; if provided, replaces the preset's
+   *  persona_description in the assembled `personaDescription` slot. */
+  userDescription?: string;
   variables?: Record<string, string | number>;
   extraVariables?: Record<string, any>;
   formatPrompt?: string;
@@ -27,7 +30,7 @@ export interface AssembleResult {
 }
 
 export function assemblePrompt(options: AssembleOptions): AssembleResult {
-  const { userInput, history, preset, lorebooks, userName, characterName, variables, extraVariables, formatPrompt, memories } = options;
+  const { userInput, history, preset, lorebooks, userName, characterName, userDescription, variables, extraVariables, formatPrompt, memories } = options;
 
   const allMatchedEntries: MatchedEntry[] = [];
   const scanText = userInput + ' ' + history.slice(-3).map(m => m.content).join(' ');
@@ -86,6 +89,8 @@ export function assemblePrompt(options: AssembleOptions): AssembleResult {
       return preset.settings.scenario || null;
     }
     if (identifier === 'personaDescription') {
+      // Active user profile description takes precedence over the preset's static one
+      if (userDescription && userDescription.trim()) return userDescription;
       return preset.settings.persona_description || null;
     }
     if (identifier === 'dialogueExamples') {

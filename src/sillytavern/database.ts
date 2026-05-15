@@ -3,11 +3,11 @@
  */
 
 import Dexie, { type Table } from 'dexie';
-import type { Lorebook, ChatPreset, AppSettings, ChatSession } from './types';
+import type { Lorebook, ChatPreset, AppSettings, ChatSession, UserProfile } from './types';
 import { DEFAULT_SETTINGS, DEFAULT_FORMAT_PROMPT } from './types';
 
 const DB_NAME = 'SillyTavernWebDB';
-const DB_VERSION = 9;
+const DB_VERSION = 10;
 
 // Old format prompt strings shipped before the current default; if a stored template
 // matches any of these (i.e. the user never customised it), we silently bump it to the
@@ -205,6 +205,7 @@ class AppDatabase extends Dexie {
   presets!: Table<ChatPreset>;
   settings!: Table<AppSettings>;
   chats!: Table<ChatSession>;
+  users!: Table<UserProfile>;
 
   constructor() {
     super(DB_NAME);
@@ -340,6 +341,22 @@ class AppDatabase extends Dexie {
         const current = typeof s.formatPromptTemplate === 'string' ? s.formatPromptTemplate : '';
         if (PRIOR_DEFAULT_FORMAT_PROMPTS.includes(current)) {
           s.formatPromptTemplate = DEFAULT_FORMAT_PROMPT;
+          await tx.table('settings').put(s);
+        }
+      }
+    });
+    this.version(10).stores({
+      lorebooks: 'id, name, updatedAt',
+      presets: 'id, name, updatedAt',
+      settings: 'key',
+      chats: 'id, name, updatedAt',
+      users: 'id, name, updatedAt',
+    }).upgrade(async tx => {
+      // Backfill activeUserId on existing settings rows.
+      const settings = await tx.table('settings').toCollection().toArray();
+      for (const s of settings) {
+        if (s.activeUserId === undefined) {
+          s.activeUserId = null;
           await tx.table('settings').put(s);
         }
       }
@@ -533,4 +550,17 @@ export async function setVariables(chatId: string, variables: Record<string, any
   chat.variables = variables;
   chat.updatedAt = Date.now();
   await db.chats.put(chat);
+}
+
+export async function getUsers(): Promise<UserProfile[]> {
+  return getDatabase().users.toArray();
+}
+
+export async function saveUser(user: UserProfile): Promise<string> {
+  await getDatabase().users.put(user);
+  return user.id;
+}
+
+export async function deleteUser(id: string): Promise<void> {
+  await getDatabase().users.delete(id);
 }

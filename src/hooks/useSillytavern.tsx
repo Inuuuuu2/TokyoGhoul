@@ -14,6 +14,7 @@ import {
   type ChatSession,
   type ChatMessage,
   type Lorebook,
+  type UserProfile,
 } from '../sillytavern/types';
 import {
   getDatabase,
@@ -22,13 +23,16 @@ import {
   getPresets,
   getSettings,
   getChats,
+  getUsers,
   saveLorebook,
   savePreset,
   saveSettings,
   saveChat,
+  saveUser,
   deleteChat,
   deleteLorebook as deleteLorebookDb,
   deletePreset as deletePresetDb,
+  deleteUser as deleteUserDb,
 } from '../sillytavern/database';
 import { createDefaultLorebook } from '../sillytavern/editor-utils';
 import { createDefaultPreset } from '../sillytavern/types';
@@ -41,6 +45,7 @@ function useSillytavernImpl() {
   const [presets, setPresets] = useState<ChatPreset[]>([]);
   const [lorebooks, setLorebooks] = useState<Lorebook[]>([]);
   const [chats, setChats] = useState<ChatSession[]>([]);
+  const [users, setUsers] = useState<UserProfile[]>([]);
   const [activeChatId, setActiveChatId] = useState<string | null>(null);
   const [initialized, setInitialized] = useState(false);
 
@@ -52,6 +57,7 @@ function useSillytavernImpl() {
   const [showMemories, setShowMemories] = useState(false);
   const [showPromptToggle, setShowPromptToggle] = useState(false);
   const [showInspector, setShowInspector] = useState(false);
+  const [showUsers, setShowUsers] = useState(false);
 
   // ---- diagnostic: last assembled messages sent to API ----
   const [lastPromptMessages, setLastPromptMessages] = useState<Array<{ role: string; content: string }> | null>(null);
@@ -72,23 +78,29 @@ function useSillytavernImpl() {
     () => presets.find((p) => p.id === settings?.activePresetId) ?? presets[0] ?? null,
     [presets, settings]
   );
+  const activeUser = useMemo(
+    () => users.find((u) => u.id === settings?.activeUserId) ?? null,
+    [users, settings]
+  );
 
   // ---- init ----
   useEffect(() => {
     let cancelled = false;
     (async () => {
       await initializeDatabase();
-      const [l, p, s, c] = await Promise.all([
+      const [l, p, s, c, u] = await Promise.all([
         getLorebooks(),
         getPresets(),
         getSettings(),
         getChats(),
+        getUsers(),
       ]);
       if (cancelled) return;
       setLorebooks(l);
       setPresets(p);
       setSettings(s ? { ...DEFAULT_SETTINGS, ...s } : { ...DEFAULT_SETTINGS });
       setChats(c);
+      setUsers(u);
       if (c.length > 0) setActiveChatId(c[0].id);
       setInitialized(true);
     })();
@@ -100,15 +112,16 @@ function useSillytavernImpl() {
   // ---- chat helpers ----
   const createChat = useCallback(
     async (name: string, options?: { presetId?: string; lorebookIds?: string[]; userName?: string; variables?: Record<string, any> }) => {
+      const profile = settings?.activeUserId ? users.find((u) => u.id === settings.activeUserId) ?? null : null;
       const chat: ChatSession = {
         id: crypto.randomUUID(),
         name,
         messages: [],
         characterName: settings?.characterName ?? DEFAULT_SETTINGS.characterName,
-        userName: options?.userName ?? settings?.userName ?? DEFAULT_SETTINGS.userName,
+        userName: options?.userName ?? profile?.name ?? settings?.userName ?? DEFAULT_SETTINGS.userName,
         presetId: options?.presetId ?? settings?.activePresetId ?? null,
         lorebookIds: options?.lorebookIds ?? settings?.activeLorebookIds ?? [],
-        variables: options?.variables ?? {},
+        variables: options?.variables ?? { ...(profile?.initialVariables ?? {}) },
         createdAt: Date.now(),
         updatedAt: Date.now(),
       };
@@ -117,7 +130,7 @@ function useSillytavernImpl() {
       setActiveChatId(chat.id);
       return chat.id;
     },
-    [settings]
+    [settings, users]
   );
 
   const selectChat = useCallback((id: string) => setActiveChatId(id), []);
@@ -291,6 +304,61 @@ function useSillytavernImpl() {
     []
   );
 
+  // ---- user profiles ----
+  const addUser = useCallback(async (patch: Partial<Omit<UserProfile, 'id' | 'createdAt' | 'updatedAt'>>) => {
+    const now = Date.now();
+    const user: UserProfile = {
+      id: crypto.randomUUID(),
+      name: patch.name?.trim() || '未命名用户',
+      description: patch.description,
+      initialVariables: patch.initialVariables,
+      createdAt: now,
+      updatedAt: now,
+    };
+    await saveUser(user);
+    setUsers((prev) => [...prev, user]);
+    return user;
+  }, []);
+
+  const updateUser = useCallback(async (user: UserProfile) => {
+    const next: UserProfile = { ...user, updatedAt: Date.now() };
+    await saveUser(next);
+    setUsers((prev) => prev.map((u) => (u.id === next.id ? next : u)));
+    // If the user being edited is the active one, mirror name change into settings.userName
+    setSettings((prev) => {
+      if (!prev || prev.activeUserId !== next.id) return prev;
+      if (prev.userName === next.name) return prev;
+      const s = { ...prev, userName: next.name };
+      saveSettings(s);
+      return s;
+    });
+  }, []);
+
+  const removeUser = useCallback(async (id: string) => {
+    await deleteUserDb(id);
+    setUsers((prev) => prev.filter((u) => u.id !== id));
+    setSettings((prev) => {
+      if (!prev || prev.activeUserId !== id) return prev;
+      const s = { ...prev, activeUserId: null };
+      saveSettings(s);
+      return s;
+    });
+  }, []);
+
+  const switchUser = useCallback(async (id: string | null) => {
+    setSettings((prev) => {
+      if (!prev) return prev;
+      const target = id ? users.find((u) => u.id === id) : null;
+      const s: AppSettings = {
+        ...prev,
+        activeUserId: id,
+        userName: target?.name ?? prev.userName,
+      };
+      saveSettings(s);
+      return s;
+    });
+  }, [users]);
+
   // ---- v3 game mode: streaming + parser + variables ----
   const parser = useStreamParser(
     settings?.customTags ?? [...DEFAULT_TAGS],
@@ -322,8 +390,9 @@ function useSillytavernImpl() {
         history: updatedChat.messages,
         preset: activePreset!,
         lorebooks: lorebooks.filter((l) => activeLorebookIds.has(l.id)),
-        userName: settings.userName,
+        userName: activeUser?.name ?? settings.userName,
         characterName: settings.characterName,
+        userDescription: activeUser?.description,
         extraVariables: updatedChat.variables,
         formatPrompt: settings.formatPromptTemplate,
         memories: updatedChat.memories ?? [],
@@ -407,7 +476,7 @@ function useSillytavernImpl() {
       await db.chats.put(finalChat);
       setChats((prev) => prev.map((c) => (c.id === finalChat.id ? finalChat : c)));
     },
-    [activeChat, settings, lorebooks, activePreset, parser, router, showToast]
+    [activeChat, settings, lorebooks, activePreset, activeUser, parser, router, showToast]
   );
 
   const jumpToFloor = useCallback(
@@ -486,8 +555,10 @@ function useSillytavernImpl() {
     presets,
     lorebooks,
     chats,
+    users,
     activeChat,
     activePreset,
+    activeUser,
     initialized,
 
     // chat actions
@@ -511,6 +582,12 @@ function useSillytavernImpl() {
     deletePreset,
     addPresetFromDefault,
 
+    // user profiles
+    addUser,
+    updateUser,
+    removeUser,
+    switchUser,
+
     // v3 game mode
     sendGameMessage,
     jumpToFloor,
@@ -524,6 +601,7 @@ function useSillytavernImpl() {
     openMemories: () => setShowMemories(true),
     openPromptToggle: () => setShowPromptToggle(true),
     openInspector: () => setShowInspector(true),
+    openUsers: () => setShowUsers(true),
 
     // diagnostic
     lastPromptMessages,
@@ -543,6 +621,8 @@ function useSillytavernImpl() {
     setShowPromptToggle,
     showInspector,
     setShowInspector,
+    showUsers,
+    setShowUsers,
 
     // variables
     setChatVariables,

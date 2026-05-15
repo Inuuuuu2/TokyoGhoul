@@ -399,7 +399,7 @@ export async function initializeDatabase(): Promise<void> {
       primary = {
         id: crypto.randomUUID(),
         name: presetName,
-        description: '导入的 SillyTavern 文风预设；含 232 个子 prompt，可在 PROMPTS 面板自由开关。',
+        description: '导入的 SillyTavern 文风预设；含 232 个子 prompt，可在 PRESETS · 提示词块 tab 自由开关。',
         settings: defaultPresetData,
         createdAt: Date.now(),
         updatedAt: Date.now(),

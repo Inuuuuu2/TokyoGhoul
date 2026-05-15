@@ -55,7 +55,6 @@ function useSillytavernImpl() {
   const [showPresets, setShowPresets] = useState(false);
   const [showVariables, setShowVariables] = useState(false);
   const [showMemories, setShowMemories] = useState(false);
-  const [showPromptToggle, setShowPromptToggle] = useState(false);
   const [showInspector, setShowInspector] = useState(false);
   const [showUsers, setShowUsers] = useState(false);
 
@@ -366,6 +365,107 @@ function useSillytavernImpl() {
   );
   const router = useApiRouter(settings?.api ?? DEFAULT_SETTINGS.api);
 
+  /** Generate an AI reply for `baseChat` — caller guarantees the last message
+   *  is the user input the AI should respond to. Does NOT append a new user
+   *  message; uses baseChat as-is for the prompt assembly. */
+  const generateAiReply = useCallback(
+    async (baseChat: ChatSession) => {
+      if (!settings) return;
+      const lastUserMsg = [...baseChat.messages].reverse().find((m) => m.role === 'user');
+      if (!lastUserMsg) {
+        showToast('当前对话里没有可用作 prompt 的用户消息');
+        return;
+      }
+
+      const activeLorebookIds = new Set(settings.activeLorebookIds ?? []);
+      const { messages } = assemblePrompt({
+        userInput: lastUserMsg.content,
+        history: baseChat.messages,
+        preset: activePreset!,
+        lorebooks: lorebooks.filter((l) => activeLorebookIds.has(l.id)),
+        userName: activeUser?.name ?? settings.userName,
+        characterName: settings.characterName,
+        userDescription: activeUser?.description,
+        extraVariables: baseChat.variables,
+        formatPrompt: settings.formatPromptTemplate,
+        memories: baseChat.memories ?? [],
+      });
+      setLastPromptMessages(messages.map((m) => ({ role: m.role, content: m.content })));
+
+      parser.start();
+      try {
+        await router.sendStream({
+          task: 'story',
+          messages,
+          onChunk: (delta) => parser.feed(delta),
+        });
+      } catch (e: any) {
+        parser.reset();
+        const msg = e?.message ?? String(e);
+        console.error('[generateAiReply] stream error:', e);
+        showToast(`AI 请求失败：${msg}`);
+        return;
+      }
+
+      const { events, parsed } = parser.finish();
+      const { nextVariables, snapshot } = applyParsedToChat(baseChat.variables ?? {}, parsed);
+
+      const visibleContent = events
+        .filter((e) =>
+          e.type === 'raw' ||
+          (e.type === 'tag-chunk' && e.tag !== 'memory' && e.tag !== 'vars' && e.tag !== 'thinking' && e.tag !== 'think')
+        )
+        .map((e: any) => e.chunk)
+        .join('')
+        .trim();
+
+      let finalParsed = parsed;
+      let finalContent = visibleContent;
+      if (!parsed.maintext.trim() && !visibleContent) {
+        if (parsed.thinking.trim()) {
+          const fallback =
+            `⚠ AI 本回合没有生成 <maintext>，下方是它的思考过程（请重试或在 PRESETS 面板检查格式硬性铁律）：\n\n${parsed.thinking.trim()}`;
+          finalParsed = { ...parsed, maintext: fallback };
+          finalContent = fallback;
+          console.warn('[generateAiReply] AI returned thinking only, no maintext. Events:', events);
+          showToast('AI 未生成 <maintext>，已用思考过程兜底显示');
+        } else {
+          finalContent = '⚠ AI 返回了空响应。请检查 API key / 模型可用性 / 控制台日志。';
+          finalParsed = { ...parsed, maintext: finalContent };
+          console.warn('[generateAiReply] AI returned fully empty response. Events:', events);
+          showToast('AI 返回空响应，请重试或检查 API 配置');
+        }
+      }
+
+      const assistantMsgId = crypto.randomUUID();
+      const assistantMsg: ChatMessage = {
+        id: assistantMsgId,
+        role: 'assistant',
+        content: finalContent,
+        timestamp: Date.now(),
+        parsed: finalParsed,
+        variablesAfter: snapshot,
+        apiUsed: 'primary',
+      };
+      const { memories: nextMemories, sequences: nextSequences } = applyMemoryPatch(
+        baseChat.memories ?? [],
+        parsed.memoryPatch,
+        { sourceMessageId: assistantMsgId, sequences: baseChat.memorySequences },
+      );
+      const finalChat: ChatSession = {
+        ...baseChat,
+        messages: [...baseChat.messages, assistantMsg],
+        variables: nextVariables,
+        memories: nextMemories,
+        memorySequences: nextSequences,
+        updatedAt: Date.now(),
+      };
+      await db.chats.put(finalChat);
+      setChats((prev) => prev.map((c) => (c.id === finalChat.id ? finalChat : c)));
+    },
+    [settings, lorebooks, activePreset, activeUser, parser, router, showToast]
+  );
+
   const sendGameMessage = useCallback(
     async (userText: string) => {
       if (!activeChat || !settings) return;
@@ -383,100 +483,9 @@ function useSillytavernImpl() {
       };
       await db.chats.put(updatedChat);
       setChats((prev) => prev.map((c) => (c.id === updatedChat.id ? updatedChat : c)));
-
-      const activeLorebookIds = new Set(settings.activeLorebookIds ?? []);
-      const { messages } = assemblePrompt({
-        userInput: userText,
-        history: updatedChat.messages,
-        preset: activePreset!,
-        lorebooks: lorebooks.filter((l) => activeLorebookIds.has(l.id)),
-        userName: activeUser?.name ?? settings.userName,
-        characterName: settings.characterName,
-        userDescription: activeUser?.description,
-        extraVariables: updatedChat.variables,
-        formatPrompt: settings.formatPromptTemplate,
-        memories: updatedChat.memories ?? [],
-      });
-      setLastPromptMessages(messages.map(m => ({ role: m.role, content: m.content })));
-
-      parser.start();
-      try {
-        await router.sendStream({
-          task: 'story',
-          messages,
-          onChunk: (delta) => parser.feed(delta),
-        });
-      } catch (e: any) {
-        parser.reset();
-        const msg = e?.message ?? String(e);
-        console.error('[sendGameMessage] stream error:', e);
-        showToast(`AI 请求失败：${msg}`);
-        return;
-      }
-
-      const { events, parsed } = parser.finish();
-      const { nextVariables, snapshot } = applyParsedToChat(
-        updatedChat.variables ?? {},
-        parsed
-      );
-
-      // 显示用 content：raw + 非 meta 标签内容；保留原始事件顺序
-      const visibleContent = events
-        .filter((e) =>
-          e.type === 'raw' ||
-          (e.type === 'tag-chunk' && e.tag !== 'memory' && e.tag !== 'vars' && e.tag !== 'thinking' && e.tag !== 'think')
-        )
-        .map((e: any) => e.chunk)
-        .join('')
-        .trim();
-
-      // 兜底：如果 AI 完全没生成 <maintext> 也没任何 raw / 其他可见内容，
-      // 至少把 thinking 抬出来当正文，避免出现"空气泡"。
-      let finalParsed = parsed;
-      let finalContent = visibleContent;
-      if (!parsed.maintext.trim() && !visibleContent) {
-        if (parsed.thinking.trim()) {
-          const fallback =
-            `⚠ AI 本回合没有生成 <maintext>，下方是它的思考过程（请重试或点 'PROMPTS' 检查格式硬性铁律）：\n\n${parsed.thinking.trim()}`;
-          finalParsed = { ...parsed, maintext: fallback };
-          finalContent = fallback;
-          console.warn('[sendGameMessage] AI returned thinking only, no maintext. Events:', events);
-          showToast('AI 未生成 <maintext>，已用思考过程兜底显示');
-        } else {
-          finalContent = '⚠ AI 返回了空响应。请检查 API key / 模型可用性 / 控制台日志。';
-          finalParsed = { ...parsed, maintext: finalContent };
-          console.warn('[sendGameMessage] AI returned fully empty response. Events:', events);
-          showToast('AI 返回空响应，请重试或检查 API 配置');
-        }
-      }
-
-      const assistantMsgId = crypto.randomUUID();
-      const assistantMsg: ChatMessage = {
-        id: assistantMsgId,
-        role: 'assistant',
-        content: finalContent,
-        timestamp: Date.now(),
-        parsed: finalParsed,
-        variablesAfter: snapshot,
-        apiUsed: 'primary',
-      };
-      const { memories: nextMemories, sequences: nextSequences } = applyMemoryPatch(
-        updatedChat.memories ?? [],
-        parsed.memoryPatch,
-        { sourceMessageId: assistantMsgId, sequences: updatedChat.memorySequences },
-      );
-      const finalChat: ChatSession = {
-        ...updatedChat,
-        messages: [...updatedChat.messages, assistantMsg],
-        variables: nextVariables,
-        memories: nextMemories,
-        memorySequences: nextSequences,
-        updatedAt: Date.now(),
-      };
-      await db.chats.put(finalChat);
-      setChats((prev) => prev.map((c) => (c.id === finalChat.id ? finalChat : c)));
+      await generateAiReply(updatedChat);
     },
-    [activeChat, settings, lorebooks, activePreset, activeUser, parser, router, showToast]
+    [activeChat, settings, generateAiReply]
   );
 
   const jumpToFloor = useCallback(
@@ -502,23 +511,52 @@ function useSillytavernImpl() {
     [activeChat]
   );
 
+  /** Drop the trailing assistant floor (if any) and ask the AI to regenerate
+   *  using the existing last-user message — without duplicating that message. */
   const regenerateLast = useCallback(async () => {
     if (!activeChat) return;
-    const lastUserIdx = [...activeChat.messages]
-      .reverse()
-      .findIndex((m) => m.role === 'user');
-    if (lastUserIdx < 0) return;
-    const targetIdx = activeChat.messages.length - 1 - lastUserIdx;
-    const truncated = activeChat.messages.slice(0, targetIdx);
+    // Locate the last assistant message; if none, nothing to regenerate.
+    const reverseAiIdx = [...activeChat.messages].reverse().findIndex((m) => m.role === 'assistant');
+    if (reverseAiIdx < 0) {
+      showToast('当前没有可重新生成的 AI 回复');
+      return;
+    }
+    const aiIdx = activeChat.messages.length - 1 - reverseAiIdx;
+    const removedAi = activeChat.messages[aiIdx];
+    // Truncate everything from the AI floor onward (handles edge case where the AI
+    // wasn't the very last message — we still wipe from there to keep history clean).
+    const truncated = activeChat.messages.slice(0, aiIdx);
+    const last = truncated[truncated.length - 1];
+    if (!last || last.role !== 'user') {
+      showToast('上一条不是用户消息，无法重新生成');
+      return;
+    }
+    // Restore variables to the snapshot saved on the prior assistant turn
+    // (or fall back to current chat variables if there is no prior assistant).
+    const priorAssistant = [...truncated].reverse().find((m) => m.role === 'assistant');
+    const restoredVars =
+      (priorAssistant?.variablesAfter as Record<string, any> | undefined) ??
+      activeChat.variables ??
+      {};
+    // Drop any memory entries whose source was the AI message we're discarding,
+    // so the regenerated turn starts from the same memory state as the original.
+    const filteredMemories = (activeChat.memories ?? []).filter(
+      (m) => m.sourceMessageId !== removedAi.id,
+    );
+
     const next: ChatSession = {
       ...activeChat,
       messages: truncated,
+      variables: restoredVars,
+      memories: filteredMemories,
       updatedAt: Date.now(),
     };
     await db.chats.put(next);
     setChats((prev) => prev.map((c) => (c.id === next.id ? next : c)));
-    await sendGameMessage(activeChat.messages[targetIdx].content);
-  }, [activeChat, sendGameMessage]);
+    // Pass the truncated chat *explicitly* — generateAiReply does not rely on
+    // closure-captured activeChat, so this is immune to React state lag.
+    await generateAiReply(next);
+  }, [activeChat, generateAiReply, showToast]);
 
   const setChatVariables = useCallback(
     async (vars: Record<string, any>) => {
@@ -599,7 +637,6 @@ function useSillytavernImpl() {
     openPresets: () => setShowPresets(true),
     openVariables: () => setShowVariables(true),
     openMemories: () => setShowMemories(true),
-    openPromptToggle: () => setShowPromptToggle(true),
     openInspector: () => setShowInspector(true),
     openUsers: () => setShowUsers(true),
 
@@ -617,8 +654,6 @@ function useSillytavernImpl() {
     setShowVariables,
     showMemories,
     setShowMemories,
-    showPromptToggle,
-    setShowPromptToggle,
     showInspector,
     setShowInspector,
     showUsers,

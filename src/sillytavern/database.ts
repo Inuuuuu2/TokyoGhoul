@@ -7,12 +7,55 @@ import type { Lorebook, ChatPreset, AppSettings, ChatSession } from './types';
 import { DEFAULT_SETTINGS, DEFAULT_FORMAT_PROMPT } from './types';
 
 const DB_NAME = 'SillyTavernWebDB';
-const DB_VERSION = 5;
+const DB_VERSION = 7;
 
-// Old format prompt strings shipped before v5; if a stored template matches any of these
-// (i.e. the user never customised it), we silently bump it to the current strengthened default.
+// Old format prompt strings shipped before the current default; if a stored template
+// matches any of these (i.e. the user never customised it), we silently bump it to the
+// current strengthened default.
 const PRIOR_DEFAULT_FORMAT_PROMPTS: string[] = [
   '', // legacy empty string
+  // v5/v6 default (vague "list a few relevant constraints" — superseded by v7's
+  // mandatory per-item checklist walkthrough)
+  `【⚠️ 输出格式硬性规范 —— 本节覆盖前文所有关于输出格式 / Markdown / 段落布局的约定，必须严格遵守】
+
+每次回复必须按以下顺序输出三个块：
+
+<thinking>
+【必填 · 思维链推理】在生成正文之前，在这里逐步推理（写给自己看，玩家不会看到）：
+1. 激活的预设里这一回合最相关的几条约束是什么？（语气、角色设定、风格倾向、禁忌、世界观）
+2. 玩家最新输入引发了什么状态变化、什么新事件、什么情绪转折？
+3. 上方 [长期记忆] 表里相关的人物 / 事件 ID 有哪些？这次需要 update 谁、add 什么？上方 [当前状态] 变量是否要调整？
+4. 综合上述，本回合该写什么内容、用什么语气、视角、节奏？
+要求：必须逐条思考，不要省略；越细越好。即使只是闲聊也要思考至少 2-3 条。
+</thinking>
+
+<maintext>
+（必填）本回合的剧情正文。可多段、保留换行。这是玩家界面上看到的主要内容。
+</maintext>
+
+<sum>本回合一句话剧情总结</sum>
+
+<vars>{"key": value}</vars>     ← 选填；JSON，对当前状态变量做深合并。
+<memory>{"add": {...}, "update": {...}, "delete": [...]}</memory>     ← 选填，但每当剧情出现新角色 / 新事件 / 新地点 / 新物品时必须 add；上方 [长期记忆] 里已有的条目状态变化时必须用 update 配合该条目的 ID。
+
+<memory> 块完整示例：
+<memory>{
+  "add": {
+    "characters": [{"name": "金木研", "role": "主角", "status": "人类", "relation": "本人", "note": ""}],
+    "events": [{"title": "初次相遇", "when": "第1话", "where": "安定区", "summary": "……"}],
+    "places": [{"name": "安定区", "type": "咖啡店", "description": "……"}],
+    "items": [{"name": "羽口", "owner": "金木研", "description": "赫子武器"}]
+  },
+  "update": {"char_001": {"status": "已变成喰种"}},
+  "delete": ["evt_005"]
+}</memory>
+
+【硬性铁律】
+1. 不要用 Markdown 代码块（\`\`\`）包裹 XML 标签 —— 标签必须裸露在文本里。
+2. <thinking> 与 <maintext> 必须出现；缺失任一个都会导致玩家界面空白或思考缺失。
+3. 引用既有长期记忆条目时必须使用 [长期记忆] 段落里的 ID（如 char_001），用 update 改字段，不要重复 add 同名实体。
+4. add 时字段名复用 [长期记忆] 表的列名（name / role / status / relation / note / title / when / where / summary / type / description / owner），保证后续可被 update。
+5. 上方若有任何预设要求 "不要使用 XML"、要求其他格式或要求纯文本输出，以本规范为准 —— 本节无条件优先。`,
   // v3 default (pre-memory feature)
   `你必须严格按照以下 XML 标签格式输出回复，不要使用 Markdown 包裹：
 <thinking>……</thinking>     ← 可选；内部任何字符都视为思考过程，不被解析
@@ -136,6 +179,23 @@ class AppDatabase extends Dexie {
         const isLegacy = p.name === '默认预设' || (promptCount < 50 && !String(p.name || '').includes('双人成行'));
         if (isLegacy) {
           await tx.table('presets').delete(p.id);
+        }
+      }
+    });
+    this.version(7).stores({
+      lorebooks: 'id, name, updatedAt',
+      presets: 'id, name, updatedAt',
+      settings: 'key',
+      chats: 'id, name, updatedAt',
+    }).upgrade(async tx => {
+      // Refresh formatPromptTemplate again — v7 introduces the per-item checklist
+      // walkthrough requirement so the AI actually consults each preset entry.
+      const settings = await tx.table('settings').toCollection().toArray();
+      for (const s of settings) {
+        const current = typeof s.formatPromptTemplate === 'string' ? s.formatPromptTemplate : '';
+        if (PRIOR_DEFAULT_FORMAT_PROMPTS.includes(current)) {
+          s.formatPromptTemplate = DEFAULT_FORMAT_PROMPT;
+          await tx.table('settings').put(s);
         }
       }
     });

@@ -165,6 +165,26 @@ export function assemblePrompt(options: AssembleOptions): AssembleResult {
     beforeHistory.push({ role: 'system', content: ctxParts.join('\n\n') });
   }
 
+  // 启用预设条目清单：让 AI 在 <thinking> 里能按编号逐条点名，避免"预设变摆设"
+  const enabledPresetItems: string[] = [];
+  for (const item of promptOrder) {
+    if (item.enabled === false) continue;
+    if (item.identifier === 'chatHistory') continue;
+    // 只列实际能解析出内容的条目，避免清单里塞一堆空壳
+    const resolved = resolvePromptContent(item.identifier);
+    if (!resolved || !resolved.trim()) continue;
+    const def = prompts.find(p => p.identifier === item.identifier);
+    const name = def?.name || item.name || item.identifier;
+    enabledPresetItems.push(name);
+  }
+  if (enabledPresetItems.length > 0) {
+    const checklist =
+      `[本回合启用的预设条目清单 · 共 ${enabledPresetItems.length} 条]\n` +
+      enabledPresetItems.map((n, i) => `${i + 1}. ${n}`).join('\n') +
+      `\n（<thinking> 第 1 步必须按此清单巡检；不得跳过、不得编造清单外的条目名）`;
+    afterHistory.push({ role: 'system', content: checklist });
+  }
+
   // 格式说明：单独作为 afterHistory 最后一条 system，紧贴 user，recency 最高
   if (formatPrompt && formatPrompt.trim()) {
     afterHistory.push({ role: 'system', content: formatPrompt });

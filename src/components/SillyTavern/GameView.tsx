@@ -25,6 +25,7 @@ import { ChatInputArea } from "../game/ChatInputArea";
 import { NpcProfileModal } from "../game/NpcProfileModal";
 import { AreaMapModal } from "../game/AreaMapModal";
 import { StatusBar } from '../game/StatusBar';
+import { MobileSideStrip } from '../game/MobileSideStrip';
 
 export function GameView() {
   const st = useSillytavern();
@@ -119,7 +120,7 @@ export function GameView() {
         )}
       </AnimatePresence>
 
-      <div className="min-h-screen flex flex-col bg-[url('https://www.transparenttextures.com/patterns/black-paper.png')] bg-ghoul-dark text-ghoul-text relative">
+      <div className="h-[100dvh] flex flex-col bg-[url('https://www.transparenttextures.com/patterns/black-paper.png')] bg-ghoul-dark text-ghoul-text relative overflow-hidden">
       {/* 顶部状态栏 */}
       <StatusBar
         rcLevel={rcLevel}
@@ -131,28 +132,37 @@ export function GameView() {
       />
 
       {/* 控制菜单 */}
-      <div className="flex gap-4 p-4 border-b border-[#222] bg-[#050505] overflow-x-auto whitespace-nowrap">
-        <button onClick={() => setPhase('title')} className="flex items-center gap-1 text-sm font-mono text-ghoul-muted hover:text-white transition-colors">
+      <div className="flex gap-3 md:gap-4 px-3 py-2 md:p-4 border-b border-[#222] bg-[#050505] overflow-x-auto whitespace-nowrap flex-shrink-0">
+        <button onClick={() => setPhase('title')} className="flex items-center gap-1 text-xs md:text-sm font-mono text-ghoul-muted hover:text-white active:text-white transition-colors">
           <Home className="w-4 h-4" /> HOME
         </button>
-        <button onClick={() => setHistoryOpen(true)} className="text-sm font-mono text-ghoul-muted hover:text-white transition-colors">☰ HISTORY [{st.activeChat?.messages?.length ?? 0}]</button>
-        <button onClick={() => st.openSettings()} className="text-sm font-mono text-ghoul-muted hover:text-white transition-colors">⚙ SETTINGS</button>
-        <button onClick={() => st.openLorebooks()} className="text-sm font-mono text-ghoul-muted hover:text-white transition-colors">📖 LOREBOOKS [{st.settings?.activeLorebookIds?.length ?? 0}]</button>
-        <button onClick={() => st.openPresets()} className="text-sm font-mono text-ghoul-muted hover:text-white transition-colors">✦ PRESETS</button>
-        <button onClick={() => st.openVariables()} className="text-sm font-mono text-ghoul-muted hover:text-white transition-colors">📊 VARS [{Object.keys(st.activeChat?.variables ?? {}).length}]</button>
-        <button onClick={() => st.openMemories()} className="text-sm font-mono text-ghoul-muted hover:text-white transition-colors">🧠 MEMORY [{(st.activeChat?.memories ?? []).length}]</button>
-        <button disabled={!lastAssistant} onClick={() => st.regenerateLast()} className="text-sm font-mono text-ghoul-muted hover:text-white transition-colors disabled:opacity-30 disabled:cursor-not-allowed">↻ RE-ROLL</button>
+        <button onClick={() => setHistoryOpen(true)} className="text-xs md:text-sm font-mono text-ghoul-muted hover:text-white active:text-white transition-colors">☰ HISTORY [{st.activeChat?.messages?.length ?? 0}]</button>
+        <button onClick={() => st.openSettings()} className="text-xs md:text-sm font-mono text-ghoul-muted hover:text-white active:text-white transition-colors">⚙ SETTINGS</button>
+        <button onClick={() => st.openLorebooks()} className="text-xs md:text-sm font-mono text-ghoul-muted hover:text-white active:text-white transition-colors">📖 LOREBOOKS [{st.settings?.activeLorebookIds?.length ?? 0}]</button>
+        <button onClick={() => st.openPresets()} className="text-xs md:text-sm font-mono text-ghoul-muted hover:text-white active:text-white transition-colors">✦ PRESETS</button>
+        <button onClick={() => st.openVariables()} className="text-xs md:text-sm font-mono text-ghoul-muted hover:text-white active:text-white transition-colors">📊 VARS [{Object.keys(st.activeChat?.variables ?? {}).length}]</button>
+        <button onClick={() => st.openMemories()} className="text-xs md:text-sm font-mono text-ghoul-muted hover:text-white active:text-white transition-colors">🧠 MEMORY [{(st.activeChat?.memories ?? []).length}]</button>
+        <button disabled={!lastAssistant} onClick={() => st.regenerateLast()} className="text-xs md:text-sm font-mono text-ghoul-muted hover:text-white active:text-white transition-colors disabled:opacity-30 disabled:cursor-not-allowed">↻ RE-ROLL</button>
         <div className="flex-1" /> {/* Spacer */}
-        <button onClick={handleDeleteChat} className="flex items-center gap-1 text-sm font-mono text-ghoul-muted hover:text-ghoul-red transition-colors">
+        <button onClick={handleDeleteChat} className="flex items-center gap-1 text-xs md:text-sm font-mono text-ghoul-muted hover:text-ghoul-red active:text-ghoul-red transition-colors">
           <Trash2 className="w-4 h-4" /> DELETE
         </button>
       </div>
 
-      {/* 主界面 */}
-      <main className="flex-1 flex flex-col md:flex-row max-w-6xl mx-auto w-full p-4 gap-6">
+      {/* 移动端紧凑 NPC/地图 条 */}
+      <MobileSideStrip
+        npcName={npcName}
+        npcTitle={npcProfile.title}
+        affinity={affinityValue}
+        onOpenNpc={() => setShowNpc(true)}
+        onOpenMap={() => setShowMap(true)}
+      />
 
-        {/* 左侧：环境立绘或氛围图 */}
-        <div className="w-full md:w-64 flex-shrink-0 flex flex-col gap-4">
+      {/* 主界面 */}
+      <main className="flex-1 min-h-0 flex flex-col md:flex-row max-w-6xl mx-auto w-full p-3 md:p-4 gap-4 md:gap-6">
+
+        {/* 左侧：环境立绘或氛围图（仅桌面端） */}
+        <div className="hidden md:flex w-64 flex-shrink-0 flex-col gap-4">
           <div className="relative aspect-[3/4] border border-[#222] bg-[#0a0a0c] overflow-hidden group">
             <div className="absolute inset-0 bg-gradient-to-b from-transparent to-[#050505] z-10" />
             <div className={`absolute inset-0 opacity-20 group-hover:opacity-40 transition-opacity duration-1000 bg-[radial-gradient(ellipse_at_center,_var(--tw-gradient-stops))] ${npcProfile.color} via-ghoul-dark to-ghoul-darker`} />
@@ -195,8 +205,8 @@ export function GameView() {
         </div>
 
         {/* 右侧：聊天记录与交互 */}
-        <div className="flex-1 flex flex-col relative h-[calc(100vh-140px)]">
-          <div className="flex-1 overflow-y-auto space-y-6 scroll-smooth pr-4 pb-4 font-serif">
+        <div className="flex-1 min-h-0 flex flex-col relative">
+          <div className="flex-1 min-h-0 overflow-y-auto space-y-4 md:space-y-6 scroll-smooth pr-2 md:pr-4 pb-4 font-serif">
             <ChatHistoryList 
               messages={st.activeChat?.messages ?? []} 
               isStreaming={isStreaming} 

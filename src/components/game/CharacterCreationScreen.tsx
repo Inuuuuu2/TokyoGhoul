@@ -54,33 +54,33 @@ export function CharacterCreationScreen({ onComplete }: { onComplete: (data: Cre
     >
       <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_center,_var(--tw-gradient-stops))] from-ghoul-red/10 via-black to-black opacity-30 pointer-events-none" />
 
-      <div className="relative z-10 w-full max-w-4xl p-8 flex flex-col gap-8">
+      <div className="relative z-10 w-full max-w-4xl p-4 md:p-8 flex flex-col gap-6 md:gap-8">
 
-        <div className="text-center mb-8">
-          <h1 className="text-4xl md:text-5xl font-black text-white tracking-[0.2em] mb-2 drop-shadow-[0_0_10px_rgba(255,255,255,0.3)]">
+        <div className="text-center mb-4 md:mb-8">
+          <h1 className="text-2xl md:text-5xl font-black text-white tracking-[0.15em] md:tracking-[0.2em] mb-2 drop-shadow-[0_0_10px_rgba(255,255,255,0.3)]">
             档案建立
           </h1>
-          <p className="text-ghoul-red tracking-widest text-sm font-mono uppercase">
+          <p className="text-ghoul-red tracking-widest text-xs md:text-sm font-mono uppercase">
             subject registration
           </p>
         </div>
 
         {/* 姓名输入 */}
         <div className="flex flex-col gap-2">
-          <label className="text-ghoul-muted tracking-widest text-sm uppercase">代号 / 姓名 (Name)</label>
+          <label className="text-ghoul-muted tracking-widest text-xs md:text-sm uppercase">代号 / 姓名 (Name)</label>
           <input
             type="text"
             value={name}
             onChange={(e) => setName(e.target.value)}
-            className="bg-black/50 border border-[#333] focus:border-ghoul-red outline-none px-4 py-3 text-white text-xl tracking-widest transition-colors font-sans"
+            className="bg-black/50 border border-[#333] focus:border-ghoul-red outline-none px-3 md:px-4 py-2.5 md:py-3 text-white text-base md:text-xl tracking-widest transition-colors font-sans"
             placeholder="输入你的名字..."
           />
         </div>
 
         {/* 阵营选择 */}
-        <div className="flex flex-col gap-4">
-          <label className="text-ghoul-muted tracking-widest text-sm uppercase">种族鉴定 (Species / Faction)</label>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <div className="flex flex-col gap-3 md:gap-4">
+          <label className="text-ghoul-muted tracking-widest text-xs md:text-sm uppercase">种族鉴定 (Species / Faction)</label>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-3 md:gap-4">
             <FactionCard
               title="喰种 (Ghoul)"
               desc="捕食人类的隐秘怪物，具备赫子与惊人的恢复力。必须进食人肉。"
@@ -110,9 +110,9 @@ export function CharacterCreationScreen({ onComplete }: { onComplete: (data: Cre
               initial={{ opacity: 0, height: 0 }}
               animate={{ opacity: 1, height: 'auto' }}
               exit={{ opacity: 0, height: 0 }}
-              className="flex flex-col gap-4 border-t border-[#333] pt-8"
+              className="flex flex-col gap-3 md:gap-4 border-t border-[#333] pt-6 md:pt-8"
             >
-              <label className="text-ghoul-muted tracking-widest text-sm uppercase">生理数值调校 (Calibration)</label>
+              <label className="text-ghoul-muted tracking-widest text-xs md:text-sm uppercase">生理数值调校 (Calibration)</label>
 
               <SliderField label="理智 (Sanity)" value={sanity} min={10} max={100} onChange={setSanity} color="text-blue-400" />
 
@@ -134,11 +134,11 @@ export function CharacterCreationScreen({ onComplete }: { onComplete: (data: Cre
           )}
         </AnimatePresence>
 
-        <div className="mt-8 flex justify-center">
+        <div className="mt-6 md:mt-8 flex justify-center">
           <button
             disabled={!name.trim() || !faction}
             onClick={handleSubmit}
-            className="px-16 py-4 border border-ghoul-red text-ghoul-red hover:bg-ghoul-red hover:text-white transition-all uppercase tracking-[0.3em] font-bold disabled:opacity-30 disabled:border-[#333] disabled:text-[#333] disabled:hover:bg-transparent"
+            className="px-8 md:px-16 py-3 md:py-4 w-full md:w-auto border border-ghoul-red text-ghoul-red hover:bg-ghoul-red hover:text-white active:bg-ghoul-red active:text-white transition-all uppercase tracking-[0.2em] md:tracking-[0.3em] font-bold disabled:opacity-30 disabled:border-[#333] disabled:text-[#333] disabled:hover:bg-transparent"
           >
             踏入深渊
           </button>
@@ -154,9 +154,9 @@ function FactionCard({ title, desc, selected, onClick }: { title: string; desc: 
   return (
     <div
       onClick={onClick}
-      className={`p-6 border cursor-pointer transition-all ${selected ? 'border-ghoul-red bg-ghoul-red/10' : 'border-[#222] bg-[#0a0a0a] hover:border-[#444]'}`}
+      className={`p-4 md:p-6 border cursor-pointer transition-all ${selected ? 'border-ghoul-red bg-ghoul-red/10' : 'border-[#222] bg-[#0a0a0a] hover:border-[#444] active:border-[#444]'}`}
     >
-      <h3 className={`text-xl font-bold mb-2 tracking-widest ${selected ? 'text-ghoul-red' : 'text-gray-300'}`}>{title}</h3>
+      <h3 className={`text-base md:text-xl font-bold mb-2 tracking-widest ${selected ? 'text-ghoul-red' : 'text-gray-300'}`}>{title}</h3>
       <p className="text-xs text-ghoul-muted leading-relaxed font-sans">{desc}</p>
     </div>
   );
@@ -165,8 +165,11 @@ function FactionCard({ title, desc, selected, onClick }: { title: string; desc: 
 // 辅助组件：属性滑块
 function SliderField({ label, value, min, max, onChange, color }: { label: string; value: number; min: number; max: number; onChange: (v: number) => void; color: string }) {
   return (
-    <div className="flex items-center gap-4 bg-[#0a0a0a] p-4 border border-[#222]">
-      <span className={`w-40 font-mono text-sm tracking-widest ${color}`}>{label}</span>
+    <div className="flex flex-col md:flex-row md:items-center gap-2 md:gap-4 bg-[#0a0a0a] p-3 md:p-4 border border-[#222]">
+      <div className="flex justify-between md:contents items-center">
+        <span className={`md:w-40 font-mono text-xs md:text-sm tracking-widest ${color}`}>{label}</span>
+        <span className={`md:hidden font-mono font-bold ${color}`}>{value}</span>
+      </div>
       <input
         type="range"
         min={min}
@@ -175,7 +178,7 @@ function SliderField({ label, value, min, max, onChange, color }: { label: strin
         onChange={(e) => onChange(Number(e.target.value))}
         className="flex-1 accent-ghoul-red"
       />
-      <span className={`w-16 text-right font-mono font-bold ${color}`}>{value}</span>
+      <span className={`hidden md:inline w-16 text-right font-mono font-bold ${color}`}>{value}</span>
     </div>
   );
 }

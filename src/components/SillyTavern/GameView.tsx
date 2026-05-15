@@ -86,6 +86,7 @@ export function GameView() {
         maintext: lastAssistant?.parsed?.maintext ?? lastAssistant?.content ?? '深呼吸，你睁开了眼睛……',
         options: lastAssistant?.parsed?.options ?? [],
         sum: lastAssistant?.parsed?.sum ?? '',
+        raw: '',
       };
 
   const rcLevel = parseInt(st.activeChat?.variables?.rcLevel?.toString() || '45');

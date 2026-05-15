@@ -89,3 +89,52 @@ export async function callGemini(messages: { role: string; content: string }[], 
   const result = await chatSession.sendMessage(currentPrompt);
   return result.response.text();
 }
+
+/** Streaming variant: pushes each chunk to onChunk as it arrives. */
+export async function callGeminiStream(
+  messages: { role: string; content: string }[],
+  config: GeminiConfig,
+  onChunk: (text: string) => void,
+): Promise<void> {
+  const genAI = new GoogleGenerativeAI(config.apiKey);
+  const modelName = config.model || 'gemini-1.5-pro';
+  const { systemInstruction, history } = formatGeminiMessages(messages);
+
+  let currentPrompt = '';
+  if (history.length > 0 && history[history.length - 1].role === 'user') {
+    currentPrompt = history.pop()!.parts[0].text;
+  } else if (history.length > 0) {
+    currentPrompt = 'Continue.';
+  }
+
+  const model = genAI.getGenerativeModel({
+    model: modelName,
+    systemInstruction: systemInstruction || undefined,
+    safetySettings: [
+      { category: HarmCategory.HARM_CATEGORY_HARASSMENT, threshold: HarmBlockThreshold.BLOCK_NONE },
+      { category: HarmCategory.HARM_CATEGORY_HATE_SPEECH, threshold: HarmBlockThreshold.BLOCK_NONE },
+      { category: HarmCategory.HARM_CATEGORY_SEXUALLY_EXPLICIT, threshold: HarmBlockThreshold.BLOCK_NONE },
+      { category: HarmCategory.HARM_CATEGORY_DANGEROUS_CONTENT, threshold: HarmBlockThreshold.BLOCK_NONE },
+    ],
+  });
+
+  const chatSession = model.startChat({
+    generationConfig: {
+      temperature: config.temperature ?? 1.0,
+      topP: config.topP,
+      topK: config.topK,
+      maxOutputTokens: config.maxOutputTokens,
+    },
+    history,
+  });
+
+  const result = await chatSession.sendMessageStream(currentPrompt);
+  for await (const chunk of result.stream) {
+    try {
+      const text = chunk.text();
+      if (text) onChunk(text);
+    } catch {
+      // skip malformed chunk
+    }
+  }
+}

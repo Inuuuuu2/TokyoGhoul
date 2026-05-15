@@ -337,9 +337,12 @@ function useSillytavernImpl() {
           messages,
           onChunk: (delta) => parser.feed(delta),
         });
-      } catch (e) {
+      } catch (e: any) {
         parser.reset();
-        throw e;
+        const msg = e?.message ?? String(e);
+        console.error('[sendGameMessage] stream error:', e);
+        showToast(`AI 请求失败：${msg}`);
+        return;
       }
 
       const { events, parsed } = parser.finish();
@@ -380,7 +383,7 @@ function useSillytavernImpl() {
       await db.chats.put(finalChat);
       setChats((prev) => prev.map((c) => (c.id === finalChat.id ? finalChat : c)));
     },
-    [activeChat, settings, lorebooks, activePreset, parser, router]
+    [activeChat, settings, lorebooks, activePreset, parser, router, showToast]
   );
 
   const jumpToFloor = useCallback(

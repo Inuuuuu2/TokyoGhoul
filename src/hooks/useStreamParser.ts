@@ -9,11 +9,13 @@ export interface StreamParserState {
   options: string[];
   sum: string;
   varsRaw: string;
+  /** Characters outside any recognised tag (raw narrative when AI ignores the XML format). */
+  raw: string;
   isStreaming: boolean;
 }
 
 const initialState: StreamParserState = {
-  thinking: '', maintext: '', options: [], sum: '', varsRaw: '', isStreaming: false,
+  thinking: '', maintext: '', options: [], sum: '', varsRaw: '', raw: '', isStreaming: false,
 };
 
 export function useStreamParser(tags: string[], opaqueTags: string[]) {
@@ -58,6 +60,8 @@ function applyEvents(prev: StreamParserState, events: ParserEvent[]): StreamPars
       else if (ev.tag === 'vars') next.varsRaw += ev.chunk;
     } else if (ev.type === 'option-line') {
       next.options = [...next.options, ev.line];
+    } else if (ev.type === 'raw') {
+      next.raw += ev.chunk;
     }
   }
   return next;

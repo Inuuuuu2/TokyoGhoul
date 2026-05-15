@@ -1,5 +1,5 @@
 import type { ApiSettings, ApiTarget, Task } from './types';
-import { callGemini } from './providers/gemini';
+import { callGeminiStream } from './providers/gemini';
 import type { GeminiConfig } from './providers/gemini';
 
 interface ChatRequest {
@@ -36,64 +36,52 @@ export function createApiRouter(settings: ApiSettings, deps: RouterDeps = {}) {
     return { baseUrl: settings.baseUrl, apiKey: settings.apiKey, model: settings.model };
   }
 
-  async function callOnce(target: ApiTarget, body: ChatRequest): Promise<Response> {
+  async function callOnce(target: ApiTarget, body: ChatRequest, signal?: AbortSignal): Promise<Response> {
     const ep = endpointFor(target);
-    
+
     // Check if we should use Gemini SDK instead of standard OpenAI format
     // A simple heuristic is if the model name contains "gemini" and baseUrl is not a proxy that handles Gemini
     const isGeminiModel = ep.model.toLowerCase().includes('gemini');
     const isGeminiNativeUrl = !ep.baseUrl || ep.baseUrl.includes('generativelanguage.googleapis.com');
     
     if (isGeminiModel && isGeminiNativeUrl) {
-      try {
-        const config: GeminiConfig = {
-          apiKey: ep.apiKey,
-          model: ep.model,
-          temperature: body.temperature ?? 1.0,
-          maxOutputTokens: body.max_tokens,
-          topP: body.top_p,
-        };
-        
-        const textResponse = await callGemini(body.messages, config);
-        
-        // Mock a fetch Response object to keep compatibility
-        return new Response(JSON.stringify({
-          id: 'chatcmpl-' + Math.random().toString(36).substr(2, 9),
-          object: 'chat.completion',
-          created: Math.floor(Date.now() / 1000),
-          model: ep.model,
-          choices: [{
-            index: 0,
-            message: {
-              role: 'assistant',
-              content: textResponse,
-            },
-            finish_reason: 'stop'
-          }],
-          usage: {
-            prompt_tokens: 0,
-            completion_tokens: 0,
-            total_tokens: 0
+      const config: GeminiConfig = {
+        apiKey: ep.apiKey,
+        model: ep.model,
+        temperature: body.temperature ?? 1.0,
+        maxOutputTokens: body.max_tokens,
+        topP: body.top_p,
+      };
+
+      // Wrap Gemini's native streaming as an OpenAI-compatible SSE Response,
+      // so the rest of the pipeline (useApiRouter.sendStream → parser) works unchanged.
+      const stream = new ReadableStream<Uint8Array>({
+        async start(controller) {
+          const encoder = new TextEncoder();
+          try {
+            await callGeminiStream(body.messages, config, (text) => {
+              const payload = JSON.stringify({
+                choices: [{ index: 0, delta: { content: text } }],
+              });
+              controller.enqueue(encoder.encode(`data: ${payload}\n\n`));
+            });
+            controller.enqueue(encoder.encode('data: [DONE]\n\n'));
+          } catch (err: any) {
+            const errPayload = JSON.stringify({
+              error: { message: err?.message || 'Gemini stream error', type: 'gemini_error' },
+            });
+            controller.enqueue(encoder.encode(`data: ${errPayload}\n\n`));
+            controller.enqueue(encoder.encode('data: [DONE]\n\n'));
+          } finally {
+            controller.close();
           }
-        }), {
-          status: 200,
-          headers: {
-            'Content-Type': 'application/json'
-          }
-        });
-      } catch (err: any) {
-        return new Response(JSON.stringify({
-          error: {
-            message: err.message || 'Gemini API Error',
-            type: 'gemini_error'
-          }
-        }), {
-          status: 500,
-          headers: {
-            'Content-Type': 'application/json'
-          }
-        });
-      }
+        },
+      });
+
+      return new Response(stream, {
+        status: 200,
+        headers: { 'Content-Type': 'text/event-stream' },
+      });
     }
 
     // Standard OpenAI compatible request
@@ -101,25 +89,27 @@ export function createApiRouter(settings: ApiSettings, deps: RouterDeps = {}) {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
+        Accept: 'text/event-stream',
         Authorization: `Bearer ${ep.apiKey}`,
       },
       body: JSON.stringify({ ...body, model: ep.model }),
+      signal,
     });
   }
 
-  async function call(task: Task, payload: ChatRequest): Promise<CallResult> {
+  async function call(task: Task, payload: ChatRequest, signal?: AbortSignal): Promise<CallResult> {
     const target = targetFor(task);
     if (target === 'secondary') {
       try {
-        const res = await callOnce('secondary', payload);
+        const res = await callOnce('secondary', payload, signal);
         if (!res.ok) throw new Error(`secondary HTTP ${res.status}`);
         return { targetUsed: 'secondary', response: res };
       } catch {
-        const res = await callOnce('primary', payload);
+        const res = await callOnce('primary', payload, signal);
         return { targetUsed: 'primary', response: res };
       }
     }
-    const res = await callOnce('primary', payload);
+    const res = await callOnce('primary', payload, signal);
     return { targetUsed: 'primary', response: res };
   }
 

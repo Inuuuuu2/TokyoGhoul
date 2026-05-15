@@ -122,8 +122,21 @@ export function ChatHistoryList({
                   {display.maintext}
                   <span className="st-cursor">▍</span>
                 </div>
+              ) : display.raw ? (
+                <>
+                  <div className="text-[10px] text-yellow-500/80 font-mono tracking-widest mb-1">
+                    ⚠ AI 未遵循 XML 输出格式，下方为原始文本：
+                  </div>
+                  <div className="st-maintext whitespace-pre-wrap leading-relaxed text-[15px] md:text-lg text-ghoul-text/90">
+                    {display.raw}
+                    <span className="st-cursor">▍</span>
+                  </div>
+                </>
               ) : !display.thinking ? (
-                <div className="text-ghoul-muted text-xs italic">等待 AI 开始响应...</div>
+                <div className="text-ghoul-muted text-xs italic flex items-center gap-2">
+                  <span className="inline-block w-2 h-2 rounded-full bg-ghoul-red animate-ping" />
+                  等待 AI 首字节...（若长时间无响应：检查 API key / 网络 / 模型名）
+                </div>
               ) : null}
             </div>
           </div>

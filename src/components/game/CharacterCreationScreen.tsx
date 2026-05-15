@@ -1,15 +1,27 @@
 import { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
+import { CustomFactionForm, type CustomFactionState } from './CustomFactionForm';
+
+export type Faction = 'ghoul' | 'ccg' | 'human' | 'custom';
 
 export interface CreationData {
   name: string;
-  faction: 'ghoul' | 'ccg' | 'human';
+  faction: Faction;
   variables: Record<string, any>;
 }
 
+const INITIAL_CUSTOM_STATE: CustomFactionState = {
+  identity: '',
+  description: '',
+  gender: '',
+  height: '',
+  appearance: '',
+  customStats: [],
+};
+
 export function CharacterCreationScreen({ onComplete }: { onComplete: (data: CreationData) => void }) {
   const [name, setName] = useState('');
-  const [faction, setFaction] = useState<'ghoul' | 'ccg' | 'human' | null>(null);
+  const [faction, setFaction] = useState<Faction | null>(null);
 
   // 基础属性状态
   const [rcLevel, setRcLevel] = useState(1000);
@@ -17,10 +29,14 @@ export function CharacterCreationScreen({ onComplete }: { onComplete: (data: Cre
   const [sanity, setSanity] = useState(80);
   const [quinque, setQuinque] = useState(20);
   const [luck, setLuck] = useState(50);
+  const [customState, setCustomState] = useState<CustomFactionState>(INITIAL_CUSTOM_STATE);
+
+  const customValid = faction !== 'custom' || customState.identity.trim().length > 0;
+  const canSubmit = name.trim().length > 0 && faction !== null && customValid;
 
   // 提交并传递给顶层
   const handleSubmit = () => {
-    if (!name.trim() || !faction) return;
+    if (!canSubmit || !faction) return;
 
     let initialVars: Record<string, any> = {
       faction,
@@ -35,6 +51,20 @@ export function CharacterCreationScreen({ onComplete }: { onComplete: (data: Cre
       initialVars = { ...initialVars, quinque_skill: quinque };
     } else if (faction === 'human') {
       initialVars = { ...initialVars, luck };
+    } else if (faction === 'custom') {
+      initialVars = {
+        ...initialVars,
+        faction: customState.identity.trim() || 'custom',
+        identity: customState.identity.trim(),
+        description: customState.description.trim(),
+      };
+      if (customState.gender.trim()) initialVars.gender = customState.gender.trim();
+      if (customState.height.trim()) initialVars.height = customState.height.trim();
+      if (customState.appearance.trim()) initialVars.appearance = customState.appearance.trim();
+      for (const stat of customState.customStats) {
+        const key = stat.name.trim();
+        if (key) initialVars[key] = stat.value;
+      }
     }
 
     onComplete({
@@ -80,7 +110,7 @@ export function CharacterCreationScreen({ onComplete }: { onComplete: (data: Cre
         {/* 阵营选择 */}
         <div className="flex flex-col gap-3 md:gap-4">
           <label className="text-ghoul-muted tracking-widest text-xs md:text-sm uppercase">种族鉴定 (Species / Faction)</label>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-3 md:gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-3 md:gap-4">
             <FactionCard
               title="喰种 (Ghoul)"
               desc="捕食人类的隐秘怪物，具备赫子与惊人的恢复力。必须进食人肉。"
@@ -99,12 +129,18 @@ export function CharacterCreationScreen({ onComplete }: { onComplete: (data: Cre
               selected={faction === 'human'}
               onClick={() => { setFaction('human'); setLuck(50); }}
             />
+            <FactionCard
+              title="自定义 (Custom)"
+              desc="自由编写身份、背景、外貌与自定义属性。给 AI 一份你自己写的人物档案。"
+              selected={faction === 'custom'}
+              onClick={() => { setFaction('custom'); }}
+            />
           </div>
         </div>
 
         {/* 动态属性加点 */}
         <AnimatePresence mode="wait">
-          {faction && (
+          {faction && faction !== 'custom' && (
             <motion.div
               key={faction}
               initial={{ opacity: 0, height: 0 }}
@@ -132,11 +168,15 @@ export function CharacterCreationScreen({ onComplete }: { onComplete: (data: Cre
               )}
             </motion.div>
           )}
+
+          {faction === 'custom' && (
+            <CustomFactionForm key="custom" value={customState} onChange={setCustomState} />
+          )}
         </AnimatePresence>
 
         <div className="mt-6 md:mt-8 flex justify-center">
           <button
-            disabled={!name.trim() || !faction}
+            disabled={!canSubmit}
             onClick={handleSubmit}
             className="px-8 md:px-16 py-3 md:py-4 w-full md:w-auto border border-ghoul-red text-ghoul-red hover:bg-ghoul-red hover:text-white active:bg-ghoul-red active:text-white transition-all uppercase tracking-[0.2em] md:tracking-[0.3em] font-bold disabled:opacity-30 disabled:border-[#333] disabled:text-[#333] disabled:hover:bg-transparent"
           >

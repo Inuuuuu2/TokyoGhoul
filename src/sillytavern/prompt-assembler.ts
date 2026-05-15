@@ -134,7 +134,8 @@ export function assemblePrompt(options: AssembleOptions): AssembleResult {
     let content = replaceMacros(rawContent, { userName, characterName, userInput, variables });
     if (!content.trim()) continue;
 
-    const role = item.role || 'system';
+    const promptDef = prompts.find(p => p.identifier === item.identifier);
+    const role = item.role || promptDef?.role || 'system';
     if (role === 'system') {
       systemAccumulator += (systemAccumulator ? '\n\n' : '') + content;
     } else {

@@ -50,6 +50,7 @@ export function useSillytavern() {
   const [showPresets, setShowPresets] = useState(false);
   const [showVariables, setShowVariables] = useState(false);
   const [showMemories, setShowMemories] = useState(false);
+  const [showPromptToggle, setShowPromptToggle] = useState(false);
 
   // ---- toast ----
   const [toast, setToast] = useState<string | null>(null);
@@ -484,6 +485,7 @@ export function useSillytavern() {
     openPresets: () => setShowPresets(true),
     openVariables: () => setShowVariables(true),
     openMemories: () => setShowMemories(true),
+    openPromptToggle: () => setShowPromptToggle(true),
 
     // modal states (for binding)
     showSettings,
@@ -496,6 +498,8 @@ export function useSillytavern() {
     setShowVariables,
     showMemories,
     setShowMemories,
+    showPromptToggle,
+    setShowPromptToggle,
 
     // variables
     setChatVariables,

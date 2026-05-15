@@ -83,33 +83,43 @@ export function getDatabase(): AppDatabase {
 export async function initializeDatabase(): Promise<void> {
   const db = getDatabase();
 
+  let defaultPresetId: string | null = null;
+
   const presetCount = await db.presets.count();
   if (presetCount === 0) {
-    const { createDefaultPreset } = await import('./types');
-    const defaultPreset = createDefaultPreset();
-    await db.presets.add({
-      ...defaultPreset,
-      id: crypto.randomUUID(),
-      createdAt: Date.now(),
-      updatedAt: Date.now(),
-    } as ChatPreset);
+    try {
+      const defaultPresetData = (await import('../assets/defaultPreset.json')).default as Record<string, any>;
+      const presetName = defaultPresetData.preset || defaultPresetData.name || '双人成行 V6.1—向斜阳';
+      defaultPresetId = crypto.randomUUID();
+      await db.presets.add({
+        id: defaultPresetId,
+        name: presetName,
+        description: '导入的 SillyTavern 文风预设；含 232 个子 prompt，可在 PROMPTS 面板自由开关。',
+        settings: defaultPresetData,
+        createdAt: Date.now(),
+        updatedAt: Date.now(),
+      });
+    } catch (e) {
+      console.warn('Failed to load default preset, falling back to minimal preset:', e);
+      const { createDefaultPreset } = await import('./types');
+      const fallbackPreset = createDefaultPreset();
+      defaultPresetId = crypto.randomUUID();
+      await db.presets.add({
+        ...fallbackPreset,
+        id: defaultPresetId,
+        createdAt: Date.now(),
+        updatedAt: Date.now(),
+      } as ChatPreset);
+    }
   }
 
   const lorebookCount = await db.lorebooks.count();
+  let defaultLorebookId: string | null = null;
   if (lorebookCount === 0) {
     try {
       const defaultLorebook = (await import('../assets/defaultLorebook.json')).default as unknown as Lorebook;
       await db.lorebooks.add(defaultLorebook);
-
-      // Auto-enable this lorebook in settings if no settings exist yet
-      const settingsCount = await db.settings.count();
-      if (settingsCount === 0) {
-        await db.settings.put({
-          ...DEFAULT_SETTINGS,
-          key: 'settings',
-          activeLorebookIds: [defaultLorebook.id]
-        });
-      }
+      defaultLorebookId = defaultLorebook.id;
     } catch (e) {
       console.warn('Failed to load default lorebook:', e);
     }
@@ -117,7 +127,12 @@ export async function initializeDatabase(): Promise<void> {
 
   const settingsCount = await db.settings.count();
   if (settingsCount === 0) {
-    await db.settings.put({ ...DEFAULT_SETTINGS, key: 'settings' });
+    await db.settings.put({
+      ...DEFAULT_SETTINGS,
+      key: 'settings',
+      activePresetId: defaultPresetId ?? null,
+      activeLorebookIds: defaultLorebookId ? [defaultLorebookId] : [],
+    });
   }
 }
 

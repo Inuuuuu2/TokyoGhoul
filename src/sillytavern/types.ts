@@ -170,16 +170,25 @@ export interface AppSettings {
 
 export const DEFAULT_FORMAT_PROMPT = `【⚠️ 输出格式硬性规范 —— 本节覆盖前文所有关于输出格式 / Markdown / 段落布局的约定，必须严格遵守】
 
-每次回复必须用以下 XML 标签包裹，顺序无所谓但都不可省略关键项：
+每次回复必须按以下顺序输出三个块：
 
-<thinking>内心思考</thinking>     ← 可选，此处任何字符不会被显示给玩家
-<maintext>本回合的剧情正文，可多段并保留换行。这是玩家在界面上看到的主要内容。</maintext>     ← 必填
-<option>选项 A
-选项 B
-选项 C</option>     ← 必填；至少 2 项，每行一个，玩家会作为按钮点击
-<sum>本回合一句话剧情总结</sum>     ← 必填
-<vars>{"key": value, ...}</vars>     ← 选填；JSON，对 chat 变量做深合并；示例 {"hp": 38, "好感度": "+5"}
-<memory>{"add": {...}, "update": {...}, "delete": [...]}</memory>     ← 选填，但每当剧情出现新角色 / 新事件 / 新地点 / 新物品时必须 add；已知条目状态变化时必须 update。
+<thinking>
+【必填 · 思维链推理】在生成正文之前，在这里逐步推理（写给自己看，玩家不会看到）：
+1. 激活的预设里这一回合最相关的几条约束是什么？（语气、角色设定、风格倾向、禁忌、世界观）
+2. 玩家最新输入引发了什么状态变化、什么新事件、什么情绪转折？
+3. 上方 [长期记忆] 表里相关的人物 / 事件 ID 有哪些？这次需要 update 谁、add 什么？上方 [当前状态] 变量是否要调整？
+4. 综合上述，本回合该写什么内容、用什么语气、视角、节奏？
+要求：必须逐条思考，不要省略；越细越好。即使只是闲聊也要思考至少 2-3 条。
+</thinking>
+
+<maintext>
+（必填）本回合的剧情正文。可多段、保留换行。这是玩家界面上看到的主要内容。
+</maintext>
+
+<sum>本回合一句话剧情总结</sum>
+
+<vars>{"key": value}</vars>     ← 选填；JSON，对当前状态变量做深合并。
+<memory>{"add": {...}, "update": {...}, "delete": [...]}</memory>     ← 选填，但每当剧情出现新角色 / 新事件 / 新地点 / 新物品时必须 add；上方 [长期记忆] 里已有的条目状态变化时必须用 update 配合该条目的 ID。
 
 <memory> 块完整示例：
 <memory>{
@@ -195,12 +204,12 @@ export const DEFAULT_FORMAT_PROMPT = `【⚠️ 输出格式硬性规范 —— 
 
 【硬性铁律】
 1. 不要用 Markdown 代码块（\`\`\`）包裹 XML 标签 —— 标签必须裸露在文本里。
-2. <maintext> 与 <option> 必须出现；缺失任意一个都会导致玩家界面空白。
-3. 引用既有长期记忆条目时，必须使用前文 [长期记忆] 段落里给出的 ID（如 char_001），用 update 改字段，不要重复 add 一个同名实体。
-4. add 时字段名复用 [长期记忆] 表的列名（name / role / status / relation / note / title / when / where / summary / type / description / owner），确保后续可被 update。
-5. 上方若有其他预设要求"不要使用标签"或要求别的输出格式，以本规范为准 —— 本规范无条件优先。`;
+2. <thinking> 与 <maintext> 必须出现；缺失任一个都会导致玩家界面空白或思考缺失。
+3. 引用既有长期记忆条目时必须使用 [长期记忆] 段落里的 ID（如 char_001），用 update 改字段，不要重复 add 同名实体。
+4. add 时字段名复用 [长期记忆] 表的列名（name / role / status / relation / note / title / when / where / summary / type / description / owner），保证后续可被 update。
+5. 上方若有任何预设要求 "不要使用 XML"、要求其他格式或要求纯文本输出，以本规范为准 —— 本节无条件优先。`;
 
-export const DEFAULT_TAGS = ['maintext', 'option', 'sum', 'vars', 'memory', 'thinking', 'think'] as const;
+export const DEFAULT_TAGS = ['maintext', 'sum', 'vars', 'memory', 'thinking', 'think'] as const;
 export const DEFAULT_OPAQUE_TAGS = ['thinking', 'think'] as const;
 
 export const DEFAULT_SETTINGS: AppSettings = {
@@ -220,7 +229,7 @@ export const DEFAULT_SETTINGS: AppSettings = {
   autoSave: true,
   autoSaveInterval: 30,
   uiMode: 'game',
-  customTags: ['maintext', 'option', 'sum', 'vars', 'memory', 'thinking', 'think'],
+  customTags: ['maintext', 'sum', 'vars', 'memory', 'thinking', 'think'],
   formatPromptTemplate: DEFAULT_FORMAT_PROMPT,
   thinkingDisplay: 'fold',
 };

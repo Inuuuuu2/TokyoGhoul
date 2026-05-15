@@ -1,8 +1,6 @@
 import { Send } from "lucide-react";
-import { OptionList } from "../SillyTavern/OptionList";
 
 interface ChatInputAreaProps {
-  options: any[];
   isStreaming: boolean;
   inputText: string;
   setInputText: (val: string) => void;
@@ -10,7 +8,6 @@ interface ChatInputAreaProps {
 }
 
 export function ChatInputArea({
-  options,
   isStreaming,
   inputText,
   setInputText,
@@ -18,14 +15,6 @@ export function ChatInputArea({
 }: ChatInputAreaProps) {
   return (
     <div className="shrink-0 bg-gradient-to-t from-[#050505] via-[#050505] to-transparent pt-4 md:pt-6 pb-2">
-      {!isStreaming && options && options.length > 0 && (
-        <OptionList
-          options={options}
-          disabled={isStreaming}
-          onPick={onSend}
-        />
-      )}
-
       <form
         onSubmit={(e) => {
           e.preventDefault();
@@ -33,14 +22,14 @@ export function ChatInputArea({
           onSend(inputText);
           setInputText('');
         }}
-        className="mt-2 md:mt-3 flex gap-2"
+        className="flex gap-2"
       >
         <input
           type="text"
           value={inputText}
           onChange={e => setInputText(e.target.value)}
           disabled={isStreaming}
-          placeholder="输入你的行动或对话..."
+          placeholder={isStreaming ? '等待 AI 响应中...' : '输入你的行动或对话...'}
           className="flex-1 min-w-0 bg-[#111] border border-[#333] focus:border-ghoul-red px-3 md:px-4 py-2.5 md:py-3 text-white text-sm md:text-base outline-none font-serif transition-colors disabled:opacity-50 shadow-inner"
         />
         <button

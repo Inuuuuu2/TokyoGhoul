@@ -122,6 +122,23 @@ class AppDatabase extends Dexie {
         }
       }
     });
+    this.version(6).stores({
+      lorebooks: 'id, name, updatedAt',
+      presets: 'id, name, updatedAt',
+      settings: 'key',
+      chats: 'id, name, updatedAt',
+    }).upgrade(async tx => {
+      // One-time cleanup: drop the legacy minimal preset ("默认预设" or any preset with
+      // an empty/short prompts array). The 双人成行 preset (200+ prompts) is preserved.
+      const presets = await tx.table('presets').toCollection().toArray();
+      for (const p of presets) {
+        const promptCount = Array.isArray(p.settings?.prompts) ? p.settings.prompts.length : 0;
+        const isLegacy = p.name === '默认预设' || (promptCount < 50 && !String(p.name || '').includes('双人成行'));
+        if (isLegacy) {
+          await tx.table('presets').delete(p.id);
+        }
+      }
+    });
   }
 }
 
@@ -134,38 +151,45 @@ export function getDatabase(): AppDatabase {
   return dbInstance;
 }
 
+const PRIMARY_PRESET_NAME = '双人成行 V6.1—向斜阳';
+
+function looksLikePrimaryPreset(p: ChatPreset): boolean {
+  if (p.name === PRIMARY_PRESET_NAME) return true;
+  if (typeof p.name === 'string' && p.name.includes('双人成行')) return true;
+  const prompts = (p.settings as { prompts?: unknown[] })?.prompts;
+  // Heuristic: the primary preset has 200+ sub-prompts.
+  return Array.isArray(prompts) && prompts.length >= 100;
+}
+
 export async function initializeDatabase(): Promise<void> {
   const db = getDatabase();
 
-  let defaultPresetId: string | null = null;
+  // Ensure the primary preset (双人成行) exists; the v6 migration already dropped the
+  // legacy minimal preset. We do NOT delete user-created presets on every init —
+  // users may legitimately add their own; we only enforce that the primary is present.
+  const allPresets = await db.presets.toArray();
+  let primary = allPresets.find(looksLikePrimaryPreset) ?? null;
 
-  const presetCount = await db.presets.count();
-  if (presetCount === 0) {
+  if (!primary) {
     try {
       const defaultPresetData = (await import('../assets/defaultPreset.json')).default as Record<string, any>;
-      const presetName = defaultPresetData.preset || defaultPresetData.name || '双人成行 V6.1—向斜阳';
-      defaultPresetId = crypto.randomUUID();
-      await db.presets.add({
-        id: defaultPresetId,
+      const presetName = defaultPresetData.preset || defaultPresetData.name || PRIMARY_PRESET_NAME;
+      primary = {
+        id: crypto.randomUUID(),
         name: presetName,
         description: '导入的 SillyTavern 文风预设；含 232 个子 prompt，可在 PROMPTS 面板自由开关。',
         settings: defaultPresetData,
         createdAt: Date.now(),
         updatedAt: Date.now(),
-      });
+      };
+      await db.presets.add(primary);
     } catch (e) {
-      console.warn('Failed to load default preset, falling back to minimal preset:', e);
-      const { createDefaultPreset } = await import('./types');
-      const fallbackPreset = createDefaultPreset();
-      defaultPresetId = crypto.randomUUID();
-      await db.presets.add({
-        ...fallbackPreset,
-        id: defaultPresetId,
-        createdAt: Date.now(),
-        updatedAt: Date.now(),
-      } as ChatPreset);
+      console.error('Failed to load default preset asset:', e);
+      throw new Error('无法加载默认预设资产 (defaultPreset.json)');
     }
   }
+
+  const defaultPresetId = primary.id;
 
   const lorebookCount = await db.lorebooks.count();
   let defaultLorebookId: string | null = null;
@@ -187,6 +211,15 @@ export async function initializeDatabase(): Promise<void> {
       activePresetId: defaultPresetId ?? null,
       activeLorebookIds: defaultLorebookId ? [defaultLorebookId] : [],
     });
+  } else {
+    // Force existing users' activePresetId to point at the primary preset
+    // (their previous active id may reference a preset we just deleted).
+    const all = await db.settings.toArray();
+    for (const s of all) {
+      if (s.activePresetId !== defaultPresetId) {
+        await db.settings.put({ ...s, activePresetId: defaultPresetId });
+      }
+    }
   }
 }
 

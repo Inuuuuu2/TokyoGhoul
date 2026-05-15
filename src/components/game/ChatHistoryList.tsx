@@ -1,5 +1,5 @@
 import { motion } from "framer-motion";
-import { User, Skull } from "lucide-react";
+import { User, Skull, Loader2 } from "lucide-react";
 import { ThinkingFold } from "../SillyTavern/ThinkingFold";
 
 interface ChatHistoryListProps {
@@ -19,7 +19,7 @@ export function ChatHistoryList({
   userName,
   characterName
 }: ChatHistoryListProps) {
-  if (messages.length === 0) {
+  if (messages.length === 0 && !isStreaming) {
     return (
       <div className="text-center text-ghoul-muted mt-20 opacity-50">
         <Skull className="w-12 h-12 mx-auto mb-4 opacity-30" />
@@ -86,6 +86,49 @@ export function ChatHistoryList({
           </motion.div>
         );
       })}
+
+      {/* 流式 phantom 助手消息：用户发完消息后立刻出现，实时刷新 AI 思考 + 正文 */}
+      {isStreaming && (
+        <motion.div
+          initial={{ opacity: 0, y: 10 }}
+          animate={{ opacity: 1, y: 0 }}
+          key="streaming-phantom"
+          className="flex gap-2 md:gap-4 flex-row"
+        >
+          <div className="flex-shrink-0 w-8 h-8 md:w-12 md:h-12 bg-[#111] border border-ghoul-red/60 flex items-center justify-center rounded-sm overflow-hidden shadow-lg shadow-black/50">
+            <Skull className="text-ghoul-red w-4 h-4 md:w-6 md:h-6 animate-pulse" />
+          </div>
+
+          <div className="flex flex-col max-w-[88%] md:max-w-[85%] items-start">
+            <span className="text-xs md:text-sm text-ghoul-muted mb-1 font-mono flex items-center gap-2">
+              {characterName}
+              <Loader2 className="w-3 h-3 animate-spin text-ghoul-red" />
+              <span className="text-[10px] text-ghoul-red/80 tracking-widest">STREAMING</span>
+            </span>
+            <div className="p-3 md:p-4 rounded-sm border bg-[#0a0a0c] border-[#440000]/60 text-[#d4d4d8] w-full">
+              {/* 流式期间强制 inline 展示思考链 */}
+              {display.thinking && (
+                <div className="mb-3 pl-3 border-l-2 border-ghoul-red/40">
+                  <div className="text-[10px] text-ghoul-red/80 font-mono tracking-widest mb-1">▼ CHAIN OF THOUGHT</div>
+                  <div className="text-xs text-ghoul-muted italic whitespace-pre-wrap leading-relaxed">
+                    {display.thinking}
+                    <span className="st-cursor opacity-50">▍</span>
+                  </div>
+                </div>
+              )}
+
+              {display.maintext ? (
+                <div className="st-maintext whitespace-pre-wrap leading-relaxed text-[15px] md:text-lg">
+                  {display.maintext}
+                  <span className="st-cursor">▍</span>
+                </div>
+              ) : !display.thinking ? (
+                <div className="text-ghoul-muted text-xs italic">等待 AI 开始响应...</div>
+              ) : null}
+            </div>
+          </div>
+        </motion.div>
+      )}
     </>
   );
 }

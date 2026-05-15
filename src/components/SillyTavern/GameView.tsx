@@ -221,12 +221,11 @@ export function GameView() {
             />
           </div>
 
-          <ChatInputArea 
-            options={display.options} 
-            isStreaming={isStreaming} 
-            inputText={inputText} 
-            setInputText={setInputText} 
-            onSend={(text) => st.sendGameMessage(text)} 
+          <ChatInputArea
+            isStreaming={isStreaming}
+            inputText={inputText}
+            setInputText={setInputText}
+            onSend={(text) => st.sendGameMessage(text)}
           />
         </div>
       </main>

@@ -64,6 +64,7 @@ export function assemblePrompt(options: AssembleOptions): AssembleResult {
 
   const prompts = (preset.settings.prompts || []) as Array<{
     identifier: string;
+    name?: string;
     role?: 'system' | 'user' | 'assistant';
     content?: string;
   }>;

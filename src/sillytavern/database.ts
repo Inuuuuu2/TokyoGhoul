@@ -4,10 +4,48 @@
 
 import Dexie, { type Table } from 'dexie';
 import type { Lorebook, ChatPreset, AppSettings, ChatSession } from './types';
-import { DEFAULT_SETTINGS } from './types';
+import { DEFAULT_SETTINGS, DEFAULT_FORMAT_PROMPT } from './types';
 
 const DB_NAME = 'SillyTavernWebDB';
-const DB_VERSION = 4;
+const DB_VERSION = 5;
+
+// Old format prompt strings shipped before v5; if a stored template matches any of these
+// (i.e. the user never customised it), we silently bump it to the current strengthened default.
+const PRIOR_DEFAULT_FORMAT_PROMPTS: string[] = [
+  '', // legacy empty string
+  // v3 default (pre-memory feature)
+  `你必须严格按照以下 XML 标签格式输出回复，不要使用 Markdown 包裹：
+<thinking>……</thinking>     ← 可选；内部任何字符都视为思考过程，不被解析
+<maintext>……</maintext>     ← 必填；本回合的剧情正文，可多段，保留换行
+<option>选项 A
+选项 B
+选项 C</option>              ← 必填；至少 2 项，每行一个
+<sum>……</sum>               ← 必填；本回合一句话总结
+<vars>{ "金钱": +10, "HP": 38 }</vars>   ← 选填；JSON 深合并`,
+  // v4 default (memory feature shipped, weak assertiveness — replaced by stronger v5 default)
+  `你必须严格按照以下 XML 标签格式输出回复，不要使用 Markdown 包裹：
+<thinking>……</thinking>     ← 可选；内部任何字符都视为思考过程，不被解析
+<maintext>……</maintext>     ← 必填；本回合的剧情正文，可多段，保留换行
+<option>选项 A
+选项 B
+选项 C</option>              ← 必填；至少 2 项，每行一个
+<sum>……</sum>               ← 必填；本回合一句话总结
+<vars>{ "金钱": +10, "HP": 38 }</vars>   ← 选填；JSON 深合并
+<memory>{                                ← 选填；长期记忆增删改，JSON
+  "add": {
+    "characters": [{ "name": "金木研", "role": "主角", "status": "人类", "relation": "本人", "note": "" }],
+    "events":     [{ "title": "初次相遇", "when": "第1话", "where": "安定区", "summary": "……" }],
+    "places":     [{ "name": "安定区", "type": "咖啡店", "description": "……" }],
+    "items":      [{ "name": "羽口", "owner": "金木研", "description": "赫子武器" }]
+  },
+  "update": { "char_001": { "status": "已变成喰种" } },
+  "delete": ["evt_005"]
+}</memory>
+说明：
+- 长期记忆已在系统消息的 [长期记忆] 部分列出，每行有唯一 ID（如 char_001）。
+- 需要补充新条目用 add；要更新已有条目（如人物状态变化）务必用 update 配合其 ID，不要重复 add。
+- add 的字段名要尽量复用上方表格里的列名，确保后续可被 update。`,
+];
 
 class AppDatabase extends Dexie {
   lorebooks!: Table<Lorebook>;
@@ -64,6 +102,22 @@ class AppDatabase extends Dexie {
       for (const s of settings) {
         if (Array.isArray(s.customTags) && !s.customTags.includes('memory')) {
           s.customTags = [...s.customTags, 'memory'];
+          await tx.table('settings').put(s);
+        }
+      }
+    });
+    this.version(5).stores({
+      lorebooks: 'id, name, updatedAt',
+      presets: 'id, name, updatedAt',
+      settings: 'key',
+      chats: 'id, name, updatedAt',
+    }).upgrade(async tx => {
+      // Refresh stored formatPromptTemplate when it matches any prior shipped default (i.e. user never edited).
+      const settings = await tx.table('settings').toCollection().toArray();
+      for (const s of settings) {
+        const current = typeof s.formatPromptTemplate === 'string' ? s.formatPromptTemplate : '';
+        if (PRIOR_DEFAULT_FORMAT_PROMPTS.includes(current)) {
+          s.formatPromptTemplate = DEFAULT_FORMAT_PROMPT;
           await tx.table('settings').put(s);
         }
       }

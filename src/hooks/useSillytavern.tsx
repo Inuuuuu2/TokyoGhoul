@@ -51,6 +51,10 @@ function useSillytavernImpl() {
   const [showVariables, setShowVariables] = useState(false);
   const [showMemories, setShowMemories] = useState(false);
   const [showPromptToggle, setShowPromptToggle] = useState(false);
+  const [showInspector, setShowInspector] = useState(false);
+
+  // ---- diagnostic: last assembled messages sent to API ----
+  const [lastPromptMessages, setLastPromptMessages] = useState<Array<{ role: string; content: string }> | null>(null);
 
   // ---- toast ----
   const [toast, setToast] = useState<string | null>(null);
@@ -324,6 +328,7 @@ function useSillytavernImpl() {
         formatPrompt: settings.formatPromptTemplate,
         memories: updatedChat.memories ?? [],
       });
+      setLastPromptMessages(messages.map(m => ({ role: m.role, content: m.content })));
 
       parser.start();
       try {
@@ -491,6 +496,10 @@ function useSillytavernImpl() {
     openVariables: () => setShowVariables(true),
     openMemories: () => setShowMemories(true),
     openPromptToggle: () => setShowPromptToggle(true),
+    openInspector: () => setShowInspector(true),
+
+    // diagnostic
+    lastPromptMessages,
 
     // modal states (for binding)
     showSettings,
@@ -505,6 +514,8 @@ function useSillytavernImpl() {
     setShowMemories,
     showPromptToggle,
     setShowPromptToggle,
+    showInspector,
+    setShowInspector,
 
     // variables
     setChatVariables,

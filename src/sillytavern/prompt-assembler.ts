@@ -111,20 +111,26 @@ export function assemblePrompt(options: AssembleOptions): AssembleResult {
     return null;
   }
 
-  const assembledMessages: { role: 'system' | 'user' | 'assistant'; content: string }[] = [];
+  // 三段式：beforeHistory (preset 主体 + 上下文) → history → afterHistory (格式说明 = 最高 recency) → user
+  const beforeHistory: { role: 'system' | 'user' | 'assistant'; content: string }[] = [];
+  const afterHistory: { role: 'system' | 'user' | 'assistant'; content: string }[] = [];
+  let phase: 'before' | 'after' = 'before';
   let systemAccumulator = '';
   let hasChatHistory = false;
+
+  const flushAccumulator = () => {
+    if (!systemAccumulator) return;
+    (phase === 'before' ? beforeHistory : afterHistory).push({ role: 'system', content: systemAccumulator });
+    systemAccumulator = '';
+  };
 
   for (const item of promptOrder) {
     if (item.enabled === false) continue;
 
     if (item.identifier === 'chatHistory') {
+      flushAccumulator();
       hasChatHistory = true;
-      if (systemAccumulator) {
-        assembledMessages.push({ role: 'system', content: systemAccumulator });
-        systemAccumulator = '';
-      }
-      assembledMessages.push(...recentHistory);
+      phase = 'after';
       continue;
     }
 
@@ -139,46 +145,40 @@ export function assemblePrompt(options: AssembleOptions): AssembleResult {
     if (role === 'system') {
       systemAccumulator += (systemAccumulator ? '\n\n' : '') + content;
     } else {
-      if (systemAccumulator) {
-        assembledMessages.push({ role: 'system', content: systemAccumulator });
-        systemAccumulator = '';
-      }
-      assembledMessages.push({ role, content });
+      flushAccumulator();
+      (phase === 'before' ? beforeHistory : afterHistory).push({ role, content });
     }
   }
+  flushAccumulator();
 
+  // 上下文（记忆 / 变量）：作为 system message 接在 beforeHistory 末尾，AI 在读历史前就能看到
+  const ctxParts: string[] = [];
   const memoriesBlock = formatMemoriesForPrompt(memories);
-  if (memoriesBlock) {
-    systemAccumulator += (systemAccumulator ? '\n\n' : '') + memoriesBlock;
-  }
-
+  if (memoriesBlock) ctxParts.push(memoriesBlock);
   const variablesBlock = formatVariablesForPrompt(variables || {});
-  if (variablesBlock) {
-    systemAccumulator += (systemAccumulator ? '\n\n' : '') + variablesBlock;
-  }
-
+  if (variablesBlock) ctxParts.push(variablesBlock);
   if (extraVariables && Object.keys(extraVariables).length > 0) {
     const extraBlock = formatVariablesForPrompt(extraVariables);
-    if (extraBlock) {
-      systemAccumulator += (systemAccumulator ? '\n\n' : '') + extraBlock;
-    }
+    if (extraBlock) ctxParts.push(extraBlock);
+  }
+  if (ctxParts.length) {
+    beforeHistory.push({ role: 'system', content: ctxParts.join('\n\n') });
   }
 
-  if (formatPrompt) {
-    systemAccumulator += (systemAccumulator ? '\n\n' : '') + formatPrompt;
+  // 格式说明：单独作为 afterHistory 最后一条 system，紧贴 user，recency 最高
+  if (formatPrompt && formatPrompt.trim()) {
+    afterHistory.push({ role: 'system', content: formatPrompt });
   }
 
-  if (systemAccumulator) {
-    assembledMessages.unshift({ role: 'system', content: systemAccumulator });
-  }
+  const assembledMessages = [
+    ...beforeHistory,
+    ...recentHistory,
+    ...afterHistory,
+    { role: 'user' as const, content: userInput },
+  ];
 
-  // Fallback: append history if prompt_order didn't include it
-  if (!hasChatHistory) {
-    assembledMessages.push(...recentHistory);
-  }
-
-  // Always append the current user input as the final message
-  assembledMessages.push({ role: 'user', content: userInput });
+  // 如果 prompt_order 完全没出现 chatHistory 标识，recentHistory 已经被上面插入；hasChatHistory 仅用于诊断
+  void hasChatHistory;
 
   const systemPrompt = assembledMessages
     .filter(m => m.role === 'system')

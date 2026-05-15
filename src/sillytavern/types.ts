@@ -168,28 +168,37 @@ export interface AppSettings {
   thinkingDisplay: 'fold' | 'hide' | 'inline';
 }
 
-export const DEFAULT_FORMAT_PROMPT = `你必须严格按照以下 XML 标签格式输出回复，不要使用 Markdown 包裹：
-<thinking>……</thinking>     ← 可选；内部任何字符都视为思考过程，不被解析
-<maintext>……</maintext>     ← 必填；本回合的剧情正文，可多段，保留换行
+export const DEFAULT_FORMAT_PROMPT = `【⚠️ 输出格式硬性规范 —— 本节覆盖前文所有关于输出格式 / Markdown / 段落布局的约定，必须严格遵守】
+
+每次回复必须用以下 XML 标签包裹，顺序无所谓但都不可省略关键项：
+
+<thinking>内心思考</thinking>     ← 可选，此处任何字符不会被显示给玩家
+<maintext>本回合的剧情正文，可多段并保留换行。这是玩家在界面上看到的主要内容。</maintext>     ← 必填
 <option>选项 A
 选项 B
-选项 C</option>              ← 必填；至少 2 项，每行一个
-<sum>……</sum>               ← 必填；本回合一句话总结
-<vars>{ "金钱": +10, "HP": 38 }</vars>   ← 选填；JSON 深合并
-<memory>{                                ← 选填；长期记忆增删改，JSON
+选项 C</option>     ← 必填；至少 2 项，每行一个，玩家会作为按钮点击
+<sum>本回合一句话剧情总结</sum>     ← 必填
+<vars>{"key": value, ...}</vars>     ← 选填；JSON，对 chat 变量做深合并；示例 {"hp": 38, "好感度": "+5"}
+<memory>{"add": {...}, "update": {...}, "delete": [...]}</memory>     ← 选填，但每当剧情出现新角色 / 新事件 / 新地点 / 新物品时必须 add；已知条目状态变化时必须 update。
+
+<memory> 块完整示例：
+<memory>{
   "add": {
-    "characters": [{ "name": "金木研", "role": "主角", "status": "人类", "relation": "本人", "note": "" }],
-    "events":     [{ "title": "初次相遇", "when": "第1话", "where": "安定区", "summary": "……" }],
-    "places":     [{ "name": "安定区", "type": "咖啡店", "description": "……" }],
-    "items":      [{ "name": "羽口", "owner": "金木研", "description": "赫子武器" }]
+    "characters": [{"name": "金木研", "role": "主角", "status": "人类", "relation": "本人", "note": ""}],
+    "events": [{"title": "初次相遇", "when": "第1话", "where": "安定区", "summary": "……"}],
+    "places": [{"name": "安定区", "type": "咖啡店", "description": "……"}],
+    "items": [{"name": "羽口", "owner": "金木研", "description": "赫子武器"}]
   },
-  "update": { "char_001": { "status": "已变成喰种" } },
+  "update": {"char_001": {"status": "已变成喰种"}},
   "delete": ["evt_005"]
 }</memory>
-说明：
-- 长期记忆已在系统消息的 [长期记忆] 部分列出，每行有唯一 ID（如 char_001）。
-- 需要补充新条目用 add；要更新已有条目（如人物状态变化）务必用 update 配合其 ID，不要重复 add。
-- add 的字段名要尽量复用上方表格里的列名，确保后续可被 update。`;
+
+【硬性铁律】
+1. 不要用 Markdown 代码块（\`\`\`）包裹 XML 标签 —— 标签必须裸露在文本里。
+2. <maintext> 与 <option> 必须出现；缺失任意一个都会导致玩家界面空白。
+3. 引用既有长期记忆条目时，必须使用前文 [长期记忆] 段落里给出的 ID（如 char_001），用 update 改字段，不要重复 add 一个同名实体。
+4. add 时字段名复用 [长期记忆] 表的列名（name / role / status / relation / note / title / when / where / summary / type / description / owner），确保后续可被 update。
+5. 上方若有其他预设要求"不要使用标签"或要求别的输出格式，以本规范为准 —— 本规范无条件优先。`;
 
 export const DEFAULT_TAGS = ['maintext', 'option', 'sum', 'vars', 'memory', 'thinking', 'think'] as const;
 export const DEFAULT_OPAQUE_TAGS = ['thinking', 'think'] as const;

@@ -453,7 +453,21 @@ function looksLikePrimaryPreset(p: ChatPreset): boolean {
   return Array.isArray(prompts) && prompts.length >= 100;
 }
 
+let initPromise: Promise<void> | null = null;
+
 export async function initializeDatabase(): Promise<void> {
+  // React StrictMode (dev) double-invokes effects, so concurrent callers must
+  // share a single execution — otherwise both pass the `count === 0` check and
+  // race to `add()` the same fixed-id default lorebook (ConstraintError).
+  if (initPromise) return initPromise;
+  initPromise = initializeDatabaseInner().catch((e) => {
+    initPromise = null;
+    throw e;
+  });
+  return initPromise;
+}
+
+async function initializeDatabaseInner(): Promise<void> {
   const db = getDatabase();
 
   // Ensure the primary preset (双人成行) exists; the v6 migration already dropped the

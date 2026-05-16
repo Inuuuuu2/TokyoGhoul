@@ -3,12 +3,13 @@
  */
 
 import Dexie, { type Table } from 'dexie';
-import type { Lorebook, ChatPreset, AppSettings, ChatSession, UserProfile, RegexScript } from './types';
+import type { Lorebook, ChatPreset, AppSettings, ChatSession, UserProfile, RegexScript, SillyTavernLorebookExport } from './types';
 import { DEFAULT_SETTINGS, DEFAULT_FORMAT_PROMPT } from './types';
 import { normalizePromptOrder } from './editor-utils';
+import { importLorebook } from './importer';
 
 const DB_NAME = 'SillyTavernWebDB';
-const DB_VERSION = 14;
+const DB_VERSION = 15;
 
 // Old format prompt strings shipped before the current default; if a stored template
 // matches any of these (i.e. the user never customised it), we silently bump it to the
@@ -199,6 +200,57 @@ const PRIOR_DEFAULT_FORMAT_PROMPTS: string[] = [
 - 长期记忆已在系统消息的 [长期记忆] 部分列出，每行有唯一 ID（如 char_001）。
 - 需要补充新条目用 add；要更新已有条目（如人物状态变化）务必用 update 配合其 ID，不要重复 add。
 - add 的字段名要尽量复用上方表格里的列名，确保后续可被 update。`,
+  // v9 default (5-10 most-relevant enumeration; soft "可选但建议". AI kept
+  // skipping items and ignoring the preset's thinking demands; superseded by
+  // v10 which mandates full N-item enumeration with explicit "本回合不触发"
+  // marker for non-applicable entries.)
+  `【⚠️ 输出格式硬性规范 · 红线】
+
+== 红线 == 每次回复都必须包含 <maintext>……</maintext>。漏写就是空回，玩家界面直接空白。
+== 红线 == 正文（故事内容）只能写在 <maintext> 块里。不要把正文写进 <thinking>。
+== 红线 == 不要用 Markdown 代码块（\`\`\`）包裹任何 XML 标签 —— 标签必须裸露。
+
+输出顺序：<thinking> → <maintext> → <sum> → <vars>（可选）→ <memory>（可选）。
+
+<thinking>
+（可选但建议）思维链推理，玩家不可见。务必简短——这一块越长，给 maintext 的 token 越少。
+
+1. 预设巡检：从上方 [本回合启用的预设条目清单] 里挑 5-10 条最相关的，按"序号. 条目名 → 怎么落地"一句话写出。
+2. 玩家输入：1-2 句概括引发了什么变化、什么转折。
+3. 记忆 / 变量：1-2 句，提及要 update / add 的条目 ID 与要调的状态变量。
+4. 写作策略：1 句话，定调本回合写什么、什么节奏。
+
+注意：完整正文 / 对话 / 描写都不写在这里，写在下面的 <maintext> 里。
+</thinking>
+
+<maintext>
+== 这里写本回合的剧情正文（必填、必填、必填）==
+玩家界面上看到的就是这一段。可多段、保留换行。无论 <thinking> 写了多少，这一块都不能省、不能空、不能只放一句敷衍语。
+</maintext>
+
+<sum>本回合一句话剧情总结</sum>
+
+<vars>{"key": value}</vars>     ← 选填；JSON，对当前状态变量做深合并。
+<memory>{"add": {...}, "update": {...}, "delete": [...]}</memory>     ← 选填，但每当剧情出现新角色 / 新事件 / 新地点 / 新物品时必须 add；上方 [长期记忆] 里已有的条目状态变化时必须用 update 配合该条目的 ID。
+
+<memory> 块完整示例：
+<memory>{
+  "add": {
+    "characters": [{"name": "金木研", "role": "主角", "status": "人类", "relation": "本人", "note": ""}],
+    "events": [{"title": "初次相遇", "when": "第1话", "where": "安定区", "summary": "……"}],
+    "places": [{"name": "安定区", "type": "咖啡店", "description": "……"}],
+    "items": [{"name": "羽口", "owner": "金木研", "description": "赫子武器"}]
+  },
+  "update": {"char_001": {"status": "已变成喰种"}},
+  "delete": ["evt_005"]
+}</memory>
+
+【硬性铁律】
+1. 不要用 Markdown 代码块（\`\`\`）包裹 XML 标签 —— 标签必须裸露在文本里。
+2. <thinking> 与 <maintext> 必须出现；缺失任一个都会导致玩家界面空白或思考缺失。
+3. 引用既有长期记忆条目时必须使用 [长期记忆] 段落里的 ID（如 char_001），用 update 改字段，不要重复 add 同名实体。
+4. add 时字段名复用 [长期记忆] 表的列名（name / role / status / relation / note / title / when / where / summary / type / description / owner），保证后续可被 update。
+5. 上方若有任何预设要求 "不要使用 XML"、要求其他格式或要求纯文本输出，以本规范为准 —— 本节无条件优先。`,
 ];
 
 /** Preset character: 郡（こおり）/桑折. Seeded once in v12 migration so it
@@ -478,6 +530,35 @@ class AppDatabase extends Dexie {
         }
       }
     });
+    this.version(15).stores({
+      lorebooks: 'id, name, updatedAt',
+      presets: 'id, name, updatedAt',
+      settings: 'key',
+      chats: 'id, name, updatedAt',
+      users: 'id, name, updatedAt',
+      regexes: 'id, scriptName, updatedAt',
+    }).upgrade(async (tx) => {
+      // 2026-05-17: switch default lorebook (3.0.0 → 3.2.0 raw SillyTavern
+      // export) and bump format prompt to v10 (mandatory full N-item
+      // enumeration, no skipping). Clear lorebooks + activeLorebookIds so
+      // init re-seeds with the new world info; refresh formatPromptTemplate
+      // for users who never customised it.
+      await tx.table('lorebooks').clear();
+      const settings = await tx.table('settings').toCollection().toArray();
+      for (const s of settings) {
+        let patched = false;
+        if (Array.isArray(s.activeLorebookIds) && s.activeLorebookIds.length > 0) {
+          s.activeLorebookIds = [];
+          patched = true;
+        }
+        const current = typeof s.formatPromptTemplate === 'string' ? s.formatPromptTemplate : '';
+        if (PRIOR_DEFAULT_FORMAT_PROMPTS.includes(current)) {
+          s.formatPromptTemplate = DEFAULT_FORMAT_PROMPT;
+          patched = true;
+        }
+        if (patched) await tx.table('settings').put(s);
+      }
+    });
   }
 }
 
@@ -553,9 +634,33 @@ async function initializeDatabaseInner(): Promise<void> {
   let defaultLorebookId: string | null = null;
   if (lorebookCount === 0) {
     try {
-      const defaultLorebook = (await import('../assets/defaultLorebook.json')).default as unknown as Lorebook;
-      await db.lorebooks.add(defaultLorebook);
-      defaultLorebookId = defaultLorebook.id;
+      const raw = (await import('../assets/defaultLorebook.json')).default as any;
+      let lorebook: Lorebook;
+      if (Array.isArray(raw?.entries)) {
+        // Already in our internal Lorebook shape (top-level id/name + entries array).
+        lorebook = {
+          ...(raw as Lorebook),
+          id: raw.id || crypto.randomUUID(),
+          createdAt: raw.createdAt ?? Date.now(),
+          updatedAt: raw.updatedAt ?? Date.now(),
+        };
+      } else if (raw?.entries && typeof raw.entries === 'object') {
+        // SillyTavern raw export — entries is a numeric-keyed object. Convert it
+        // via importLorebook, then attach id + timestamps + a sensible name
+        // (fall back to originalData.name when the top level omits it).
+        const stData: SillyTavernLorebookExport = {
+          ...raw,
+          name: raw.name || raw.originalData?.name || '默认世界书',
+          description: raw.description ?? raw.originalData?.description,
+        };
+        const converted = importLorebook(stData);
+        const now = Date.now();
+        lorebook = { ...converted, id: crypto.randomUUID(), createdAt: now, updatedAt: now };
+      } else {
+        throw new Error('defaultLorebook.json 缺少有效的 entries');
+      }
+      await db.lorebooks.add(lorebook);
+      defaultLorebookId = lorebook.id;
     } catch (e) {
       console.warn('Failed to load default lorebook:', e);
     }
@@ -589,13 +694,22 @@ async function initializeDatabaseInner(): Promise<void> {
       activeLorebookIds: defaultLorebookId ? [defaultLorebookId] : [],
     });
   } else {
-    // Force existing users' activePresetId to point at the primary preset
-    // (their previous active id may reference a preset we just deleted).
+    // Patch existing settings rows:
+    //  - activePresetId may reference a preset we just deleted in a migration.
+    //  - activeLorebookIds may be empty after the v15 lorebook reset; seed it
+    //    with the freshly-loaded default so the player isn't stranded with no
+    //    world info active.
     const all = await db.settings.toArray();
     for (const s of all) {
+      let patched = s;
       if (s.activePresetId !== defaultPresetId) {
-        await db.settings.put({ ...s, activePresetId: defaultPresetId });
+        patched = { ...patched, activePresetId: defaultPresetId };
       }
+      const hasLore = Array.isArray(s.activeLorebookIds) && s.activeLorebookIds.length > 0;
+      if (!hasLore && defaultLorebookId) {
+        patched = { ...patched, activeLorebookIds: [defaultLorebookId] };
+      }
+      if (patched !== s) await db.settings.put(patched);
     }
   }
 }

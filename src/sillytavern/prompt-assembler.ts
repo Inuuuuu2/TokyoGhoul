@@ -6,6 +6,7 @@ import type { ChatPreset, Lorebook, ChatMessage, MatchedEntry, RegexScript } fro
 import { createLorebookEngine } from './lorebook-engine';
 import { formatVariablesForPrompt } from './variables';
 import { applyPromptRules } from './regex-engine';
+import { normalizePromptOrder } from './editor-utils';
 
 export interface AssembleOptions {
   userInput: string;
@@ -70,12 +71,9 @@ export function assemblePrompt(options: AssembleOptions): AssembleResult {
     currentTokens += msgTokens;
   }
 
-  const promptOrder = (preset.settings.prompt_order || []) as Array<{
-    identifier: string;
-    name?: string;
-    role?: 'system' | 'user' | 'assistant';
-    enabled?: boolean;
-  }>;
+  // Defensive normalization: tolerate both the flat shape ({identifier, enabled}[])
+  // and SillyTavern's wrapped containers ([{character_id, order:[...]}]).
+  const promptOrder = normalizePromptOrder(preset.settings.prompt_order);
 
   const prompts = (preset.settings.prompts || []) as Array<{
     identifier: string;

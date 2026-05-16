@@ -78,6 +78,38 @@ export function movePromptItem<T>(arr: T[], from: number, to: number): T[] {
   return next;
 }
 
+export interface PromptOrderItem {
+  identifier: string;
+  name?: string;
+  role?: 'system' | 'user' | 'assistant';
+  enabled?: boolean;
+}
+
+/**
+ * Normalise SillyTavern's preset `prompt_order` to a flat array of items.
+ *
+ * SillyTavern exports often wrap the order list in per-character containers:
+ *   [ { character_id: 100001, order: [{ identifier, enabled }, ...] } ]
+ *
+ * Older / hand-crafted presets store the flat form directly:
+ *   [ { identifier, enabled }, ... ]
+ *
+ * Returns `[]` for nullish / non-array input, picks the `character_id === 100001`
+ * container when present (SillyTavern's "default" character), or falls back to
+ * the first container's `order`. Flat input is passed through unchanged.
+ */
+export function normalizePromptOrder(raw: unknown): PromptOrderItem[] {
+  if (!Array.isArray(raw) || raw.length === 0) return [];
+  const first = raw[0] as { order?: unknown; identifier?: unknown } | null;
+  if (first && typeof first === 'object' && Array.isArray((first as any).order)) {
+    const container =
+      raw.find((c: any) => c?.character_id === 100001) ?? first;
+    const order = (container as any).order;
+    return Array.isArray(order) ? (order as PromptOrderItem[]) : [];
+  }
+  return raw as PromptOrderItem[];
+}
+
 export function clampNumber(
   value: unknown,
   min: number,

@@ -5,9 +5,10 @@
 import Dexie, { type Table } from 'dexie';
 import type { Lorebook, ChatPreset, AppSettings, ChatSession, UserProfile, RegexScript } from './types';
 import { DEFAULT_SETTINGS, DEFAULT_FORMAT_PROMPT } from './types';
+import { normalizePromptOrder } from './editor-utils';
 
 const DB_NAME = 'SillyTavernWebDB';
-const DB_VERSION = 13;
+const DB_VERSION = 14;
 
 // Old format prompt strings shipped before the current default; if a stored template
 // matches any of these (i.e. the user never customised it), we silently bump it to the
@@ -453,6 +454,30 @@ class AppDatabase extends Dexie {
         }
       }
     });
+    this.version(14).stores({
+      lorebooks: 'id, name, updatedAt',
+      presets: 'id, name, updatedAt',
+      settings: 'key',
+      chats: 'id, name, updatedAt',
+      users: 'id, name, updatedAt',
+      regexes: 'id, scriptName, updatedAt',
+    }).upgrade(async (tx) => {
+      // 2026-05-17: flatten SillyTavern wrapped prompt_order containers
+      // ([{character_id, order:[...]}]) into the flat [{identifier, enabled}]
+      // shape that prompt-assembler / PresetModal expect. This fixes the
+      // 咩咩预设 V2.6.5 seed which arrived in the wrapped format and caused
+      // every prompt to be skipped at assembly time.
+      const presets = await tx.table('presets').toCollection().toArray();
+      for (const p of presets) {
+        const raw = (p as any)?.settings?.prompt_order;
+        if (Array.isArray(raw) && raw.length > 0 && raw[0] && typeof raw[0] === 'object' && Array.isArray((raw[0] as any).order)) {
+          const container = raw.find((c: any) => c?.character_id === 100001) ?? raw[0];
+          const flat = Array.isArray((container as any).order) ? (container as any).order : [];
+          (p as any).settings = { ...(p as any).settings, prompt_order: flat };
+          await tx.table('presets').put(p);
+        }
+      }
+    });
   }
 }
 
@@ -501,11 +526,17 @@ async function initializeDatabaseInner(): Promise<void> {
       const defaultPresetData = (await import('../assets/defaultPreset.json')).default as Record<string, any>;
       const presetName = defaultPresetData.preset || defaultPresetData.name || PRIMARY_PRESET_NAME;
       const promptCount = Array.isArray(defaultPresetData.prompts) ? defaultPresetData.prompts.length : 0;
+      // Flatten wrapped prompt_order at seed time so the on-disk shape stays
+      // consistent with what assembler / editor expect.
+      const seededSettings = {
+        ...defaultPresetData,
+        prompt_order: normalizePromptOrder(defaultPresetData.prompt_order),
+      };
       primary = {
         id: crypto.randomUUID(),
         name: presetName,
         description: `导入的 SillyTavern 文风预设；含 ${promptCount} 个子 prompt，可在 PRESETS · 提示词块 tab 自由开关。`,
-        settings: defaultPresetData,
+        settings: seededSettings,
         createdAt: Date.now(),
         updatedAt: Date.now(),
       };

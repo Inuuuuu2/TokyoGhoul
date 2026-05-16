@@ -1,7 +1,7 @@
 import { useState, useMemo, useEffect, useRef } from 'react';
 import type { ChatPreset } from '../../sillytavern/types';
 import { useSillytavern } from '../../hooks/useSillytavern';
-import { movePromptItem } from '../../sillytavern/editor-utils';
+import { movePromptItem, normalizePromptOrder } from '../../sillytavern/editor-utils';
 import { Settings, X, Upload, Download, Trash2, Plus, ChevronRight } from 'lucide-react';
 
 const TABS = ['basic', 'prompts', 'params'] as const;
@@ -143,7 +143,9 @@ export function PresetModal({ onClose }: { onClose: () => void }) {
   };
 
   const promptOrder = useMemo<OrderItem[]>(
-    () => (draft?.settings.prompt_order ?? []) as OrderItem[],
+    // Tolerate wrapped SillyTavern containers in legacy stored presets;
+    // patchSettings will write back the flat shape on the next edit.
+    () => normalizePromptOrder(draft?.settings.prompt_order) as OrderItem[],
     [draft],
   );
   const prompts = useMemo<PromptItem[]>(
@@ -223,7 +225,10 @@ export function PresetModal({ onClose }: { onClose: () => void }) {
           id: crypto.randomUUID(),
           name: String(data.name) || '导入的预设',
           description: typeof data.description === 'string' ? data.description : undefined,
-          settings: data.settings,
+          settings: {
+            ...data.settings,
+            prompt_order: normalizePromptOrder(data.settings?.prompt_order),
+          },
           createdAt: Date.now(),
           updatedAt: Date.now(),
         };
@@ -232,7 +237,10 @@ export function PresetModal({ onClose }: { onClose: () => void }) {
           id: crypto.randomUUID(),
           name: file.name.replace(/\.json$/i, ''),
           description: undefined,
-          settings: data,
+          settings: {
+            ...data,
+            prompt_order: normalizePromptOrder(data.prompt_order),
+          },
           createdAt: Date.now(),
           updatedAt: Date.now(),
         };

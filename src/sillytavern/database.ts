@@ -9,7 +9,7 @@ import { normalizePromptOrder } from './editor-utils';
 import { importLorebook } from './importer';
 
 const DB_NAME = 'SillyTavernWebDB';
-const DB_VERSION = 16;
+const DB_VERSION = 17;
 
 // Old format prompt strings shipped before the current default; if a stored template
 // matches any of these (i.e. the user never customised it), we silently bump it to the
@@ -219,6 +219,64 @@ const PRIOR_DEFAULT_FORMAT_PROMPTS: string[] = [
 2. 玩家输入：1-2 句概括引发了什么变化、什么转折。
 3. 记忆 / 变量：1-2 句，提及要 update / add 的条目 ID 与要调的状态变量。
 4. 写作策略：1 句话，定调本回合写什么、什么节奏。
+
+注意：完整正文 / 对话 / 描写都不写在这里，写在下面的 <maintext> 里。
+</thinking>
+
+<maintext>
+== 这里写本回合的剧情正文（必填、必填、必填）==
+玩家界面上看到的就是这一段。可多段、保留换行。无论 <thinking> 写了多少，这一块都不能省、不能空、不能只放一句敷衍语。
+</maintext>
+
+<sum>本回合一句话剧情总结</sum>
+
+<vars>{"key": value}</vars>     ← 选填；JSON，对当前状态变量做深合并。
+<memory>{"add": {...}, "update": {...}, "delete": [...]}</memory>     ← 选填，但每当剧情出现新角色 / 新事件 / 新地点 / 新物品时必须 add；上方 [长期记忆] 里已有的条目状态变化时必须用 update 配合该条目的 ID。
+
+<memory> 块完整示例：
+<memory>{
+  "add": {
+    "characters": [{"name": "金木研", "role": "主角", "status": "人类", "relation": "本人", "note": ""}],
+    "events": [{"title": "初次相遇", "when": "第1话", "where": "安定区", "summary": "……"}],
+    "places": [{"name": "安定区", "type": "咖啡店", "description": "……"}],
+    "items": [{"name": "羽口", "owner": "金木研", "description": "赫子武器"}]
+  },
+  "update": {"char_001": {"status": "已变成喰种"}},
+  "delete": ["evt_005"]
+}</memory>
+
+【硬性铁律】
+1. 不要用 Markdown 代码块（\`\`\`）包裹 XML 标签 —— 标签必须裸露在文本里。
+2. <thinking> 与 <maintext> 必须出现；缺失任一个都会导致玩家界面空白或思考缺失。
+3. 引用既有长期记忆条目时必须使用 [长期记忆] 段落里的 ID（如 char_001），用 update 改字段，不要重复 add 同名实体。
+4. add 时字段名复用 [长期记忆] 表的列名（name / role / status / relation / note / title / when / where / summary / type / description / owner），保证后续可被 update。
+5. 上方若有任何预设要求 "不要使用 XML"、要求其他格式或要求纯文本输出，以本规范为准 —— 本节无条件优先。`,
+  // v10 default (mandated逐条 enumeration of EVERY enabled preset item including
+  // "本回合不触发" reasons. With 165+ items in 咩咩预设 the AI spent the entire
+  // budget on thinking and left maintext empty — same failure mode as v7.
+  // Superseded by v11 which keeps full coverage but bulk-merges 不触发 items
+  // into a single 序号区间 line.)
+  `【⚠️ 输出格式硬性规范 · 红线】
+
+== 红线 == 每次回复都必须包含 <maintext>……</maintext>。漏写就是空回，玩家界面直接空白。
+== 红线 == 正文（故事内容）只能写在 <maintext> 块里。不要把正文写进 <thinking>。
+== 红线 == 不要用 Markdown 代码块（\`\`\`）包裹任何 XML 标签 —— 标签必须裸露。
+== 红线 == <thinking> 步骤 1 必须把 [本回合启用的预设条目清单] 的**全部 N 条**逐条点名。少一条算违规。
+
+输出顺序：<thinking> → <maintext> → <sum> → <vars>（可选）→ <memory>（可选）。
+
+<thinking>
+（必填）思维链推理，玩家不可见。控制总长，每条一句话即可——这块越长，给 maintext 的 token 越少。
+
+1. 预设巡检（最重要 · 硬性义务）：
+   把上方 [本回合启用的预设条目清单] 的**全部 N 条**逐条点名，按格式 "序号. 条目名 → 这回合怎么落地（一句话）" 一行一条。
+   - 严禁跳条、严禁写"略"、严禁合并、严禁只挑几条最相关。
+   - 与本回合明显无关的，也要写 "本回合不触发，原因：xxx"，绝对不能省。
+   - 引用的序号 / 条目名必须与清单完全一致，不许虚构。
+   - 每条只写一句话，不要展开成段（展开放到步骤 4 的写作策略里）。
+2. 玩家输入：1-2 句，引发了什么状态变化、新事件、情绪转折。
+3. 记忆 / 变量：1-2 句，要 update / add 的条目 ID 与要调的状态变量。
+4. 写作策略：1-2 句，由步骤 1 哪几条预设决定本回合的调性 / 视角 / 节奏。
 
 注意：完整正文 / 对话 / 描写都不写在这里，写在下面的 <maintext> 里。
 </thinking>
@@ -577,6 +635,27 @@ class AppDatabase extends Dexie {
         const next = await mergeAntiHijackPrompts(p.settings ?? {});
         if (next === p.settings) continue;
         await tx.table('presets').put({ ...p, settings: next, updatedAt: Date.now() });
+      }
+    });
+    this.version(17).stores({
+      lorebooks: 'id, name, updatedAt',
+      presets: 'id, name, updatedAt',
+      settings: 'key',
+      chats: 'id, name, updatedAt',
+      users: 'id, name, updatedAt',
+      regexes: 'id, scriptName, updatedAt',
+    }).upgrade(async (tx) => {
+      // 2026-05-17: bump format prompt v10 → v11. v10 demanded 逐条 enumeration
+      // of all 165+ preset items in <thinking>, which burned the entire token
+      // budget and left <maintext> empty (same regression as v7). v11 keeps
+      // full coverage but bulk-merges 不触发 items into a single 序号区间 line.
+      const settings = await tx.table('settings').toCollection().toArray();
+      for (const s of settings) {
+        const current = typeof s.formatPromptTemplate === 'string' ? s.formatPromptTemplate : '';
+        if (PRIOR_DEFAULT_FORMAT_PROMPTS.includes(current)) {
+          s.formatPromptTemplate = DEFAULT_FORMAT_PROMPT;
+          await tx.table('settings').put(s);
+        }
       }
     });
   }

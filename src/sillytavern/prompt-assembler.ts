@@ -196,7 +196,7 @@ export function assemblePrompt(options: AssembleOptions): AssembleResult {
     const checklist =
       `[本回合启用的预设条目清单 · 共 ${enabledPresetItems.length} 条]\n` +
       enabledPresetItems.map((n, i) => `${i + 1}. ${n}`).join('\n') +
-      `\n（<thinking> 第 1 步必须把这 ${enabledPresetItems.length} 条**全部**逐条点名，严禁跳条、严禁写"略"、严禁合并。不直接触发的也要写"本回合不触发，原因：xxx"。引用序号必须用清单里真实存在的，不许虚构）`;
+      `\n（<thinking> 第 1 步：**触发**的条目逐条点名（通常 5-15 条）；**不触发**的用序号区间合并写一行 "不触发：序号 X-Y, Z …"。"触发 + 不触发" 的序号集合必须覆盖全部 ${enabledPresetItems.length} 条，少一个算违规。引用的序号 / 条目名必须真实存在，不许虚构）`;
     afterHistory.push({ role: 'system', content: checklist });
   }
 

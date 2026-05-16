@@ -1,0 +1,529 @@
+[
+    {
+        "id": "7614828c-002e-4e78-b904-35ffeed04b38",
+        "scriptName": "1️⃣",
+        "findRegex": "",
+        "replaceString": "",
+        "trimStrings": [],
+        "placement": [
+            2
+        ],
+        "disabled": true,
+        "markdownOnly": true,
+        "promptOnly": false,
+        "runOnEdit": false,
+        "substituteRegex": 0,
+        "minDepth": null,
+        "maxDepth": null
+    },
+    {
+        "id": "34432374-c33d-4247-a270-4b04faa06eac",
+        "scriptName": "display清空AI历史记录仅保留总结 copy",
+        "findRegex": "^[\\s\\S]*?(<memory_log>[\\s\\S]*?<\\/memory_log>)[\\s\\S]*$",
+        "replaceString": "$1",
+        "trimStrings": [],
+        "placement": [
+            2
+        ],
+        "disabled": false,
+        "markdownOnly": true,
+        "promptOnly": false,
+        "runOnEdit": false,
+        "substituteRegex": 1,
+        "minDepth": 2,
+        "maxDepth": null
+    },
+    {
+        "id": "2cd77469-116e-4c13-816e-3cbe975a3380",
+        "scriptName": "send清空AI历史记录仅保留总结",
+        "findRegex": "^[\\s\\S]*?<memory_log>([\\s\\S]*?)<\\/memory_log>[\\s\\S]*$",
+        "replaceString": "$1",
+        "trimStrings": [],
+        "placement": [
+            2
+        ],
+        "disabled": false,
+        "markdownOnly": false,
+        "promptOnly": true,
+        "runOnEdit": false,
+        "substituteRegex": 1,
+        "minDepth": 2,
+        "maxDepth": null
+    },
+    {
+        "id": "5398dde3-d150-4f70-b59b-8ca9f9ca7b3c",
+        "scriptName": "2️⃣",
+        "findRegex": "",
+        "replaceString": "",
+        "trimStrings": [],
+        "placement": [
+            2
+        ],
+        "disabled": true,
+        "markdownOnly": true,
+        "promptOnly": false,
+        "runOnEdit": false,
+        "substituteRegex": 0,
+        "minDepth": null,
+        "maxDepth": null
+    },
+    {
+        "id": "62eeaa08-5ddc-4c96-9d8b-515b9dc96eb8",
+        "scriptName": "开场白美化",
+        "findRegex": "/<opening>\\s*([\\s\\S]*?)\\s*<\\/opening>/gi",
+        "replaceString": "<style>@keyframes glitchBarO2{0%{background-position:0 0}100%{background-position:0 200%}}@keyframes panelGlowO2{0%{box-shadow:0 0 15px rgba(136,68,255,0.2)}50%{box-shadow:0 0 35px rgba(136,68,255,0.35),0 0 60px rgba(0,255,255,0.08)}100%{box-shadow:0 0 15px rgba(136,68,255,0.2)}}@keyframes sheepGlitchO2{0%{text-shadow:0 0 0 transparent;transform:translate(0)}2%{text-shadow:2px 0 #ff00ff,-2px 0 #00ffff;transform:translate(-1px,1px)}4%{text-shadow:0 0 0 transparent;transform:translate(0)}30%{text-shadow:0 0 0 transparent}32%{text-shadow:-2px 1px #ff00ff,2px -1px #00ffff}34%{text-shadow:0 0 0 transparent}100%{text-shadow:0 0 0 transparent;transform:translate(0)}}@keyframes dotBlinkO2{0%{opacity:0.3}50%{opacity:1}100%{opacity:0.3}}@keyframes starFlowO2{0%{background-position:0% 50%}100%{background-position:200% 50%}}@keyframes titleGlowO2{0%{text-shadow:0 0 8px rgba(136,68,255,0.3),0 0 16px rgba(0,255,255,0.1)}50%{text-shadow:0 0 16px rgba(136,68,255,0.5),0 0 32px rgba(0,255,255,0.2)}100%{text-shadow:0 0 8px rgba(136,68,255,0.3),0 0 16px rgba(0,255,255,0.1)}}</style><div style=\"max-width:100%;margin:14px 0;font-family:'Georgia','Songti SC',serif;\"><div style=\"border-radius:10px;overflow:hidden;animation:panelGlowO2 4s ease-in-out infinite;\"><div style=\"height:3px;background:linear-gradient(90deg,#0a001a,#8844ff,#00cccc,#8844ff,#0a001a);background-size:200% 100%;animation:starFlowO2 3s linear infinite;\"></div><div style=\"display:flex;background:linear-gradient(160deg,#0d0020,#1a0a35,#08001a);position:relative;\"><div style=\"width:28px;min-height:100%;background:linear-gradient(180deg,#8844ff22,#00cccc22,#8844ff22,#00cccc22);background-size:100% 200%;animation:glitchBarO2 4s linear infinite;border-right:1px solid rgba(136,68,255,0.2);flex-shrink:0;\"></div><div style=\"flex:1;min-width:0;position:relative;\"><div style=\"position:absolute;top:10px;right:14px;display:flex;gap:3px;z-index:3;\"><span style=\"width:3px;height:3px;border-radius:50%;background:#8844ff;animation:dotBlinkO2 2s infinite 0s;\"></span><span style=\"width:3px;height:3px;border-radius:50%;background:#00cccc;animation:dotBlinkO2 2s infinite 0.4s;\"></span><span style=\"width:3px;height:3px;border-radius:50%;background:#8844ff;animation:dotBlinkO2 2s infinite 0.8s;\"></span></div><div style=\"padding:22px 20px 14px;text-align:center;border-bottom:1px solid rgba(136,68,255,0.12);\"><span style=\"font-size:2em;display:inline-block;animation:sheepGlitchO2 3s infinite;filter:drop-shadow(0 0 8px rgba(136,68,255,0.5));margin-bottom:6px;\">🐑</span><div style=\"display:flex;align-items:center;justify-content:center;gap:8px;flex-wrap:nowrap;\"><span style=\"flex:0 0 30px;height:1px;background:linear-gradient(90deg,transparent,rgba(136,68,255,0.5));\"></span><span style=\"color:#c0a0ff;font-size:0.8em;letter-spacing:5px;animation:titleGlowO2 3s ease-in-out infinite;white-space:nowrap;\">SheepSheep</span><span style=\"flex:0 0 30px;height:1px;background:linear-gradient(270deg,transparent,rgba(136,68,255,0.5));\"></span></div><div style=\"color:rgba(160,200,255,0.6);font-size:0.6em;letter-spacing:3px;margin-top:2px;text-shadow:0 0 6px rgba(0,255,255,0.15);\">咩咩角色卡</div></div><div style=\"padding:18px 20px 20px;color:#dcd4f0;font-size:0.95em;line-height:1.8;white-space:pre-wrap;word-wrap:break-word;text-shadow:0 0 3px rgba(136,68,255,0.1);\">$1</div></div></div><div style=\"height:2px;background:linear-gradient(90deg,#0a001a,#8844ff55,#00cccc55,#8844ff55,#0a001a);background-size:200% 100%;animation:starFlowO2 4s linear infinite;\"></div></div></div>",
+        "trimStrings": [],
+        "placement": [
+            2
+        ],
+        "disabled": false,
+        "markdownOnly": true,
+        "promptOnly": false,
+        "runOnEdit": false,
+        "substituteRegex": 1,
+        "minDepth": null,
+        "maxDepth": null
+    },
+    {
+        "id": "e9c6c7cc-05dc-413a-8739-b1408f89a6f0",
+        "scriptName": "NPC引擎",
+        "findRegex": "/<npc_driver>\\s*([\\s\\S]*?)\\s*<\\/npc_driver>\\s*/gi",
+        "replaceString": "<style>@keyframes pulseFlow{0%{background-position:0% 50%;box-shadow:0 0 12px rgba(136,68,255,0.3),0 0 25px rgba(0,255,255,0.05)}30%{box-shadow:0 0 25px rgba(136,68,255,0.6),0 0 50px rgba(0,255,255,0.2)}50%{background-position:100% 50%;box-shadow:0 0 12px rgba(136,68,255,0.3),0 0 25px rgba(0,255,255,0.05)}80%{box-shadow:0 0 25px rgba(0,255,255,0.5),0 0 50px rgba(136,68,255,0.2)}100%{background-position:0% 50%;box-shadow:0 0 12px rgba(136,68,255,0.3),0 0 25px rgba(0,255,255,0.05)}}@keyframes arcaneFlow{0%{background-position:0% 50%}50%{background-position:100% 50%}100%{background-position:0% 50%}}</style><div style=\"margin:4px 0;padding:2px;border-radius:8px;background:linear-gradient(270deg,#0a001a,#8844ff,#00cccc,#8844ff,#0a001a);background-size:400% 400%;animation:pulseFlow 4s ease-in-out infinite;max-width:100%;box-sizing:border-box;\"><div style=\"border-radius:7px;background:radial-gradient(ellipse at center,#120828,#08001a);color:#e6e6fa;padding:14px;font-size:0.9em;line-height:1.6;font-family:monospace;word-wrap:break-word;overflow-wrap:break-word;max-height:200px;overflow-y:auto;white-space:pre-wrap;text-shadow:0 0 3px #8855ff22;margin:0;\">$1</div></div>",
+        "trimStrings": [],
+        "placement": [
+            2
+        ],
+        "disabled": false,
+        "markdownOnly": true,
+        "promptOnly": false,
+        "runOnEdit": false,
+        "substituteRegex": 1,
+        "minDepth": null,
+        "maxDepth": null
+    },
+    {
+        "id": "2b05e343-aaae-478e-917d-dc7597b75b0b",
+        "scriptName": "战斗引擎",
+        "findRegex": "/<combat_driver>\\s*([\\s\\S]*?)\\s*<\\/combat_driver>\\s*/gi",
+        "replaceString": "<div style=\"margin:4px 0;padding:2px;border-radius:8px;background:linear-gradient(270deg,#1a0000,#ff4444,#ffcc00,#ff4444,#1a0000);background-size:400% 400%;animation:arcaneFlow 5s ease infinite;box-shadow:0 0 18px rgba(255,68,68,0.35),0 0 40px rgba(255,204,0,0.1);max-width:100%;box-sizing:border-box;\"><div style=\"border-radius:7px;background:radial-gradient(ellipse at center,#1a0505,#0a0000);color:#ffcccc;padding:14px;font-size:0.9em;line-height:1.6;font-family:monospace;word-wrap:break-word;overflow-wrap:break-word;max-height:200px;overflow-y:auto;white-space:pre-wrap;text-shadow:0 0 3px #ff444422;margin:0;\">$1</div></div>",
+        "trimStrings": [],
+        "placement": [
+            2
+        ],
+        "disabled": false,
+        "markdownOnly": true,
+        "promptOnly": false,
+        "runOnEdit": false,
+        "substituteRegex": 1,
+        "minDepth": null,
+        "maxDepth": null
+    },
+    {
+        "id": "71dc9def-e0c6-40d2-b7a5-b6e6e130f3ff",
+        "scriptName": "故事引擎",
+        "findRegex": "/<story_driver>\\s*([\\s\\S]*?)\\s*<\\/story_driver>\\s*/gi",
+        "replaceString": "<style>@keyframes orbPulse{0%{box-shadow:0 0 8px rgba(136,68,255,0.4),0 0 20px rgba(0,255,255,0.1)}50%{box-shadow:0 0 20px rgba(136,68,255,0.7),0 0 40px rgba(0,255,255,0.3)}100%{box-shadow:0 0 8px rgba(136,68,255,0.4),0 0 20px rgba(0,255,255,0.1)}}@keyframes floatBob{0%{transform:translateY(0)}50%{transform:translateY(-4px)}100%{transform:translateY(0)}}@keyframes glitchEmoji{0%{text-shadow:0 0 0 transparent}2%{text-shadow:2px 0 #ff00ff,-2px 0 #00ffff}4%{text-shadow:0 0 0 transparent}30%{text-shadow:0 0 0 transparent}32%{text-shadow:-2px 0 #ff00ff,2px 0 #00ffff}34%{text-shadow:0 0 0 transparent}60%{text-shadow:0 0 0 transparent}61%{text-shadow:1px 1px #ff00ff,-1px -1px #00ffff}63%{text-shadow:0 0 0 transparent}100%{text-shadow:0 0 0 transparent}}@keyframes scanLine{0%{left:-30%}100%{left:130%}}@keyframes progressBar{0%{width:0%}50%{width:100%}100%{width:0%}}@keyframes fadeSlideIn{0%{opacity:0;max-height:0}100%{opacity:1;max-height:2000px}}</style><div style=\"margin:8px 0;text-align:center;\"><details style=\"display:inline-block;text-align:left;max-width:100%;\"><summary style=\"display:flex;align-items:center;justify-content:center;width:2.25em;height:2.25em;border-radius:50%;background:radial-gradient(circle at 35% 35%,#2a1050,#0d0020,#08001a);border:2px solid rgba(136,68,255,0.5);cursor:pointer;list-style:none;font-size:1.25em;margin:0 auto;user-select:none;animation:floatBob 2.5s ease-in-out infinite,orbPulse 2s ease-in-out infinite,glitchEmoji 3s infinite;\">🐑</summary><div style=\"margin-top:6px;padding:2px;border-radius:10px;background:linear-gradient(270deg,#0a001a,#8844ff,#00cccc,#8844ff,#0a001a);background-size:400% 400%;animation:pulseFlow 4s ease-in-out infinite,fadeSlideIn 0.4s ease-out;max-width:100%;box-sizing:border-box;overflow:hidden;\"><div style=\"border-radius:9px;background:radial-gradient(ellipse at center,#120828,#08001a);margin:0;overflow:hidden;\"><div style=\"padding:10px 14px 8px;font-size:0.9em;line-height:1.6;font-family:monospace;word-wrap:break-word;overflow-wrap:break-word;white-space:pre-wrap;text-shadow:0 0 3px #8855ff22;color:#e6e6fa;position:relative;\"><span style=\"display:block;height:1px;margin:0 auto 8px;width:80%;position:relative;overflow:hidden;background:rgba(136,68,255,0.15);border-radius:1px;\"><span style=\"position:absolute;top:0;height:100%;width:30%;background:linear-gradient(90deg,transparent,#00ffff,transparent);animation:scanLine 2.5s ease-in-out infinite;\"></span></span>$1</div><div style=\"height:2px;margin:0 14px 8px;background:rgba(136,68,255,0.15);border-radius:1px;overflow:hidden;\"><div style=\"height:100%;background:linear-gradient(90deg,#8844ff,#00ffff);animation:progressBar 6s ease-in-out infinite;border-radius:1px;\"></div></div></div></div></details></div>",
+        "trimStrings": [],
+        "placement": [
+            2
+        ],
+        "disabled": false,
+        "markdownOnly": true,
+        "promptOnly": false,
+        "runOnEdit": false,
+        "substituteRegex": 1,
+        "minDepth": null,
+        "maxDepth": null
+    },
+    {
+        "id": "122040df-ac4f-4206-8be9-4c08e3679370",
+        "scriptName": "acg角色心理模型",
+        "findRegex": "/<acg_think>\\s*([\\s\\S]*?)\\s*<\\/acg_think>\\s*/gi",
+        "replaceString": "<style>@keyframes neonSweep{0%{left:-30%}100%{left:130%}}@keyframes pulseFlow{0%{background-position:0% 50%;box-shadow:0 0 12px rgba(136,68,255,0.3),0 0 25px rgba(0,255,255,0.05)}30%{box-shadow:0 0 25px rgba(136,68,255,0.6),0 0 50px rgba(0,255,255,0.2)}50%{background-position:100% 50%;box-shadow:0 0 12px rgba(136,68,255,0.3),0 0 25px rgba(0,255,255,0.05)}80%{box-shadow:0 0 25px rgba(0,255,255,0.5),0 0 50px rgba(136,68,255,0.2)}100%{background-position:0% 50%;box-shadow:0 0 12px rgba(136,68,255,0.3),0 0 25px rgba(0,255,255,0.05)}}@keyframes fadeSlideIn{0%{opacity:0;max-height:0}100%{opacity:1;max-height:2000px}}</style><div style=\"margin:6px 0;\"><details style=\"width:100%;\"><summary style=\"display:flex;align-items:center;justify-content:center;gap:0;padding:2px 0;cursor:pointer;list-style:none;\"><div style=\"flex:1;height:1px;background:rgba(136,68,255,0.1);border-radius:1px;position:relative;overflow:hidden;\"><div style=\"position:absolute;top:0;height:100%;width:30%;background:linear-gradient(90deg,transparent,rgba(136,68,255,0.4),transparent);animation:neonSweep 4s ease-in-out infinite;\"></div></div><span style=\"flex-shrink:0;padding:0 0.8em;font-size:0.6em;font-family:monospace;color:rgba(136,68,255,0.35);letter-spacing:2px;white-space:nowrap;text-align:center;\">acg角色心理模型</span><div style=\"flex:1;height:1px;background:rgba(136,68,255,0.1);border-radius:1px;position:relative;overflow:hidden;\"><div style=\"position:absolute;top:0;height:100%;width:30%;background:linear-gradient(90deg,transparent,rgba(136,68,255,0.4),transparent);animation:neonSweep 4s ease-in-out 2s infinite;\"></div></div></summary><div style=\"margin-top:4px;padding:2px;border-radius:10px;background:linear-gradient(270deg,#0d001a,#6622cc,#8844ff,#6622cc,#0d001a);background-size:400% 400%;animation:pulseFlow 4s ease-in-out infinite,fadeSlideIn 0.4s ease-out;box-sizing:border-box;overflow:hidden;\"><div style=\"border-radius:9px;background:radial-gradient(ellipse at center,#140a28,#080012);color:#c8b0e8;padding:12px 14px;font-size:0.75em;line-height:1.6;font-family:monospace;word-wrap:break-word;overflow-wrap:break-word;white-space:pre-wrap;text-shadow:0 0 3px rgba(136,68,255,0.08);max-height:150px;overflow-y:auto;\">$1</div></div></details></div>",
+        "trimStrings": [],
+        "placement": [
+            2
+        ],
+        "disabled": false,
+        "markdownOnly": true,
+        "promptOnly": false,
+        "runOnEdit": false,
+        "substituteRegex": 1,
+        "minDepth": null,
+        "maxDepth": null
+    },
+    {
+        "id": "e442ef1d-ab88-4d10-a2aa-c5c617194408",
+        "scriptName": "3️⃣",
+        "findRegex": "",
+        "replaceString": "",
+        "trimStrings": [],
+        "placement": [
+            2
+        ],
+        "disabled": true,
+        "markdownOnly": true,
+        "promptOnly": false,
+        "runOnEdit": false,
+        "substituteRegex": 0,
+        "minDepth": null,
+        "maxDepth": null
+    },
+    {
+        "id": "8aed58fd-08b9-4d69-b0bd-12aaad7dd380",
+        "scriptName": "剧情记忆归档美化",
+        "findRegex": "/<memory_log>\\s*([\\s\\S]*?)\\s*<\\/memory_log>\\s*/gi",
+        "replaceString": "<div style=\"text-align:center;margin:4px 0;\"><details style=\"text-align:center;width:100%;display:inline-block;\"><summary style=\"display:inline-flex;align-items:center;gap:6px;padding:5px 16px 5px 8px;border-radius:50px;background:radial-gradient(circle at 20% 40%,#2a1050,#0d0020);border:1.5px solid rgba(204,136,0,0.5);cursor:pointer;list-style:none;font-size:0.75em;user-select:none;animation:floatBob 2.5s ease-in-out infinite;box-shadow:0 0 8px rgba(204,136,0,0.3);color:#ffe6a0;font-family:monospace;letter-spacing:0.5px;\"><span style=\"font-size:1.2em;animation:glitchEmoji 3s infinite;\">📑</span><span style=\"font-size:0.75em;opacity:0.7;\">剧情记忆归档</span></summary><div style=\"margin-top:6px;text-align:left;padding:2px;border-radius:10px;background:linear-gradient(270deg,#0a0800,#cc8800,#ffcc00,#cc8800,#0a0800);background-size:400% 400%;animation:pulseFlow 4s ease-in-out infinite,fadeSlideIn 0.4s ease-out;box-sizing:border-box;overflow:hidden;\"><div style=\"border-radius:9px;background:radial-gradient(ellipse at center,#2a2000,#0a0800);color:#ffe6a0;padding:15px;font-size:0.7em;line-height:1.7;font-family:sans-serif;white-space:pre-wrap;max-height:220px;overflow-y:auto;word-wrap:break-word;overflow-wrap:break-word;\">$1</div></div></details></div>",
+        "trimStrings": [],
+        "placement": [
+            2
+        ],
+        "disabled": false,
+        "markdownOnly": true,
+        "promptOnly": false,
+        "runOnEdit": false,
+        "substituteRegex": 1,
+        "minDepth": null,
+        "maxDepth": null
+    },
+    {
+        "id": "2defc4e9-6d1c-48e5-88c5-0905870276e1",
+        "scriptName": "世界运行报告美化",
+        "findRegex": "/<wlog time=\"(.*?)\">\\s*([\\s\\S]*?)\\s*<\\/wlog>\\s*/gi",
+        "replaceString": "<div style=\"text-align:center;margin:4px 0;\"><details style=\"text-align:center;width:100%;display:inline-block;\"><summary style=\"display:inline-flex;align-items:center;gap:6px;padding:5px 16px 5px 8px;border-radius:50px;background:radial-gradient(circle at 20% 40%,#2a1050,#0d0020);border:1.5px solid rgba(136,136,136,0.5);cursor:pointer;list-style:none;font-size:0.75em;user-select:none;animation:floatBob 2.5s ease-in-out 0.15s infinite;box-shadow:0 0 8px rgba(136,136,136,0.3);color:#d3d3d3;font-family:monospace;letter-spacing:0.5px;\"><span style=\"font-size:1.2em;animation:glitchEmoji 3s 0.5s infinite;\">🌍</span><span style=\"font-size:0.75em;opacity:0.7;\">世界运行报告</span><span style=\"font-size:0.65em;opacity:0.75;margin-left:4px;\">$1</span></summary><div style=\"margin-top:6px;text-align:left;padding:2px;border-radius:10px;background:linear-gradient(270deg,#0a0a0a,#666666,#aaaaaa,#666666,#0a0a0a);background-size:400% 400%;animation:pulseFlow 4s ease-in-out infinite,fadeSlideIn 0.4s ease-out;box-sizing:border-box;overflow:hidden;\"><div style=\"border-radius:9px;background:radial-gradient(ellipse at center,#222222,#0a0a0a);color:#d3d3d3;padding:15px;font-size:0.7em;line-height:1.7;font-family:sans-serif;white-space:pre-wrap;max-height:220px;overflow-y:auto;word-wrap:break-word;overflow-wrap:break-word;\">$2</div></div></details></div>",
+        "trimStrings": [],
+        "placement": [
+            2
+        ],
+        "disabled": false,
+        "markdownOnly": true,
+        "promptOnly": false,
+        "runOnEdit": false,
+        "substituteRegex": 1,
+        "minDepth": null,
+        "maxDepth": null
+    },
+    {
+        "id": "b906928d-5e57-4b02-9700-04cffa60600a",
+        "scriptName": "世界运行报告分行",
+        "findRegex": "/\\s*\\*\\*\\*\\s*/g",
+        "replaceString": "<hr style=\"border:0; border-top:1px dashed #666; margin:8px 0;\">",
+        "trimStrings": [],
+        "placement": [
+            2
+        ],
+        "disabled": false,
+        "markdownOnly": true,
+        "promptOnly": false,
+        "runOnEdit": false,
+        "substituteRegex": 0,
+        "minDepth": null,
+        "maxDepth": null
+    },
+    {
+        "id": "93124443-4548-4476-8714-40b14d7920f6",
+        "scriptName": "NPC内心话美化",
+        "findRegex": "/<npc_log>\\s*([\\s\\S]*?)\\s*<\\/npc_log>\\s*/gi",
+        "replaceString": "<div style=\"text-align:center;margin:4px 0;\"><details style=\"text-align:center;width:100%;display:inline-block;\"><summary style=\"display:inline-flex;align-items:center;gap:6px;padding:5px 16px 5px 8px;border-radius:50px;background:radial-gradient(circle at 20% 40%,#2a1050,#0d0020);border:1.5px solid rgba(0,180,200,0.5);cursor:pointer;list-style:none;font-size:0.75em;user-select:none;animation:floatBob 2.5s ease-in-out 0.6s infinite;box-shadow:0 0 8px rgba(0,180,200,0.3);color:#b0e8ef;font-family:monospace;letter-spacing:0.5px;\"><span style=\"font-size:1.2em;animation:glitchEmoji 3s 2s infinite;\">👁️</span><span style=\"font-size:0.75em;opacity:0.7;\">NPC内心话</span></summary><div style=\"margin-top:6px;text-align:left;padding:2px;border-radius:10px;background:linear-gradient(270deg,#000a0a,#00888a,#00cccc,#00888a,#000a0a);background-size:400% 400%;animation:pulseFlow 4s ease-in-out infinite,fadeSlideIn 0.4s ease-out;box-sizing:border-box;overflow:hidden;\"><div style=\"border-radius:9px;background:radial-gradient(ellipse at center,#0e2828,#000a0a);color:#b0e8ef;padding:15px;font-size:0.8em;line-height:1.7;font-family:sans-serif;white-space:pre-wrap;max-height:220px;overflow-y:auto;word-wrap:break-word;overflow-wrap:break-word;\">$1</div></div></details></div>",
+        "trimStrings": [],
+        "placement": [
+            2
+        ],
+        "disabled": false,
+        "markdownOnly": true,
+        "promptOnly": false,
+        "runOnEdit": false,
+        "substituteRegex": 0,
+        "minDepth": null,
+        "maxDepth": null
+    },
+    {
+        "id": "01203d57-a00d-48e3-8be3-b18a3c5cddc2",
+        "scriptName": "玩家状态栏美化",
+        "findRegex": "/<status>\\s*([\\s\\S]*?)\\s*<\\/status>\\s*/gi",
+        "replaceString": "<div style=\"text-align:center;margin:4px 0;\"><details style=\"text-align:center;width:100%;display:inline-block;\"><summary style=\"display:inline-flex;align-items:center;gap:6px;padding:5px 16px 5px 8px;border-radius:50px;background:radial-gradient(circle at 20% 40%,#2a1050,#0d0020);border:1.5px solid rgba(136,68,255,0.5);cursor:pointer;list-style:none;font-size:0.75em;user-select:none;animation:floatBob 2.5s ease-in-out 0.3s infinite;box-shadow:0 0 8px rgba(136,68,255,0.3);color:#e6e6fa;font-family:monospace;letter-spacing:0.5px;\"><span style=\"font-size:1.2em;animation:glitchEmoji 3s 1s infinite;\">📜</span><span style=\"font-size:0.75em;opacity:0.7;\">玩家状态栏</span></summary><div style=\"margin-top:6px;text-align:left;padding:2px;border-radius:10px;background:linear-gradient(270deg,#0a001a,#8844ff,#00cccc,#8844ff,#0a001a);background-size:400% 400%;animation:pulseFlow 4s ease-in-out infinite,fadeSlideIn 0.4s ease-out;box-sizing:border-box;overflow:hidden;\"><div style=\"border-radius:9px;background:radial-gradient(ellipse at center,#120828,#08001a);color:#e6e6fa;padding:15px;font-size:0.7em;line-height:1.7;font-family:sans-serif;white-space:pre-wrap;max-height:220px;overflow-y:auto;word-wrap:break-word;overflow-wrap:break-word;\">$1</div></div></details></div>",
+        "trimStrings": [],
+        "placement": [
+            2
+        ],
+        "disabled": false,
+        "markdownOnly": true,
+        "promptOnly": false,
+        "runOnEdit": false,
+        "substituteRegex": 1,
+        "minDepth": null,
+        "maxDepth": null
+    },
+    {
+        "id": "6e907784-18e5-479f-bb66-af9e71c29a57",
+        "scriptName": "角色好感度美化",
+        "findRegex": "/<affinity>\\s*([\\s\\S]*?)\\s*<\\/affinity>\\s*/gi",
+        "replaceString": "<div style=\"text-align:center;margin:4px 0;\"><details style=\"text-align:center;width:100%;display:inline-block;\"><summary style=\"display:inline-flex;align-items:center;gap:6px;padding:5px 16px 5px 8px;border-radius:50px;background:radial-gradient(circle at 20% 40%,#2a1050,#0d0020);border:1.5px solid rgba(255,68,136,0.5);cursor:pointer;list-style:none;font-size:0.75em;user-select:none;animation:floatBob 2.5s ease-in-out 0.45s infinite;box-shadow:0 0 8px rgba(255,68,136,0.3);color:#ffccdd;font-family:monospace;letter-spacing:0.5px;\"><span style=\"font-size:1.2em;animation:glitchEmoji 3s 1.5s infinite;\">💞</span><span style=\"font-size:0.75em;opacity:0.7;\">角色好感度</span></summary><div style=\"margin-top:6px;text-align:left;padding:2px;border-radius:10px;background:linear-gradient(270deg,#1a000a,#ff4488,#ff88cc,#ff4488,#1a000a);background-size:400% 400%;animation:pulseFlow 4s ease-in-out infinite,fadeSlideIn 0.4s ease-out;box-sizing:border-box;overflow:hidden;\"><div style=\"border-radius:9px;background:radial-gradient(ellipse at center,#1a0810,#0a0008);color:#ffccdd;padding:15px;font-size:0.7em;line-height:1.7;font-family:sans-serif;white-space:pre-wrap;max-height:220px;overflow-y:auto;word-wrap:break-word;overflow-wrap:break-word;\">$1</div></div></details></div>",
+        "trimStrings": [],
+        "placement": [
+            2
+        ],
+        "disabled": false,
+        "markdownOnly": true,
+        "promptOnly": false,
+        "runOnEdit": false,
+        "substituteRegex": 1,
+        "minDepth": null,
+        "maxDepth": null
+    },
+    {
+        "id": "e89bc4eb-1a53-4bc4-b4eb-c666059267cb",
+        "scriptName": "4️⃣",
+        "findRegex": "",
+        "replaceString": "",
+        "trimStrings": [],
+        "placement": [
+            2
+        ],
+        "disabled": true,
+        "markdownOnly": true,
+        "promptOnly": false,
+        "runOnEdit": false,
+        "substituteRegex": 0,
+        "minDepth": null,
+        "maxDepth": null
+    },
+    {
+        "id": "6374db6a-5a79-42f2-9673-db9e103303f3",
+        "scriptName": "世界视角美化",
+        "findRegex": "/<details>\\s*<summary>([\\s\\S]*?)<\\/summary>\\s*([\\s\\S]*?)\\s*<\\/details>/gi",
+        "replaceString": "<style>@keyframes detailFlowA{0%{background-position:0% 50%}100%{background-position:200% 50%}}@keyframes detailSheepGlitchA{0%{text-shadow:0 0 0 transparent}2%{text-shadow:2px 0 #ff00ff,-2px 0 #00ffff}4%{text-shadow:0 0 0 transparent}30%{text-shadow:0 0 0 transparent}32%{text-shadow:-2px 0 #ff00ff,2px 0 #00ffff}34%{text-shadow:0 0 0 transparent}100%{text-shadow:0 0 0 transparent}}@keyframes detailPanelGlow{0%{box-shadow:0 0 15px rgba(136,68,255,0.15)}50%{box-shadow:0 0 30px rgba(136,68,255,0.25),0 0 50px rgba(0,255,255,0.05)}100%{box-shadow:0 0 15px rgba(136,68,255,0.15)}}</style><div style=\"margin:12px 0;border-radius:8px;overflow:hidden;animation:detailPanelGlow 4s ease-in-out infinite;\"><div style=\"height:1px;background:linear-gradient(90deg,transparent,#8844ff55,#00cccc44,#8844ff55,transparent);background-size:200% 100%;animation:detailFlowA 4s linear infinite;box-shadow:0 1px 4px rgba(136,68,255,0.15);\"></div><details style=\"background:linear-gradient(160deg,#0d0020,#1a0a35,#08001a);\"><summary style=\"list-style:none;cursor:pointer;display:flex;align-items:center;gap:6px;padding:8px 14px;border-bottom:1px solid rgba(136,68,255,0.12);color:#dcd4f0;\"><span style=\"animation:detailSheepGlitchA 3s infinite;font-size:0.9em;\">🐑</span><span>$1</span></summary><div style=\"padding:14px 16px;color:#dcd4f0;font-size:0.95em;line-height:1.8;white-space:pre-wrap;word-wrap:break-word;text-shadow:0 0 3px rgba(136,68,255,0.1);\">$2</div></details><div style=\"height:1px;background:linear-gradient(90deg,transparent,#8844ff55,#00cccc44,#8844ff55,transparent);background-size:200% 100%;animation:detailFlowA 4s linear infinite;box-shadow:0 -1px 4px rgba(136,68,255,0.15);\"></div></div>",
+        "trimStrings": [],
+        "placement": [
+            2
+        ],
+        "disabled": false,
+        "markdownOnly": true,
+        "promptOnly": false,
+        "runOnEdit": false,
+        "substituteRegex": 1,
+        "minDepth": null,
+        "maxDepth": null
+    },
+    {
+        "id": "c9217a23-d454-404e-8c3d-b2fdf4660ea9",
+        "scriptName": "世界视角美化-无背景",
+        "findRegex": "/<details>\\s*<summary>([\\s\\S]*?)<\\/summary>\\s*([\\s\\S]*?)\\s*<\\/details>/gi",
+        "replaceString": "<style>@keyframes detailFlowT{0%{background-position:0% 50%}100%{background-position:200% 50%}}@keyframes detailSheepGlitchT{0%{text-shadow:0 0 0 transparent}2%{text-shadow:2px 0 #ff00ff,-2px 0 #00ffff}4%{text-shadow:0 0 0 transparent}30%{text-shadow:0 0 0 transparent}32%{text-shadow:-2px 0 #ff00ff,2px 0 #00ffff}34%{text-shadow:0 0 0 transparent}100%{text-shadow:0 0 0 transparent}}</style><div style=\"margin:12px 0;\"><div style=\"height:1px;background:linear-gradient(90deg,transparent,#8844ff55,#00cccc44,#8844ff55,transparent);background-size:200% 100%;animation:detailFlowT 4s linear infinite;box-shadow:0 1px 4px rgba(136,68,255,0.15);\"></div><details><summary style=\"list-style:none;cursor:pointer;display:flex;align-items:center;gap:6px;padding:8px 14px;background:linear-gradient(160deg,#0d0020,#1a0a35,#08001a);border-bottom:1px solid rgba(136,68,255,0.15);color:#dcd4f0;\"><span style=\"animation:detailSheepGlitchT 3s infinite;font-size:0.9em;\">🐑</span><span>$1</span></summary><div style=\"padding:12px 4px;\">$2</div></details><div style=\"height:1px;background:linear-gradient(90deg,transparent,#8844ff55,#00cccc44,#8844ff55,transparent);background-size:200% 100%;animation:detailFlowT 4s linear infinite;box-shadow:0 -1px 4px rgba(136,68,255,0.15);\"></div></div>",
+        "trimStrings": [],
+        "placement": [
+            2
+        ],
+        "disabled": true,
+        "markdownOnly": true,
+        "promptOnly": false,
+        "runOnEdit": false,
+        "substituteRegex": 1,
+        "minDepth": null,
+        "maxDepth": null
+    },
+    {
+        "id": "ba10ad8b-ba3f-451d-8579-2bfdff299630",
+        "scriptName": "选项美化",
+        "findRegex": "/<font color=[\"']?(.*?)[\"']?>\\s*([\\s\\S]*?)\\s*<\\/font>/gi",
+        "replaceString": "<div style=\"border:1px solid #3d3d3d;border-left:5px solid $1;background-color:#2b2b2b;padding:12px 15px;border-radius:6px;color:#ffffff;font-size:0.75em;line-height:1.6;font-family:sans-serif;box-shadow:inset 0 0 10px rgba(0,0,0,0.4), 0 2px 5px rgba(0,0,0,0.3);\">\n    <span style=\"color:$1;font-weight:bold;text-shadow:1px 1px 2px #000;margin-right:6px;font-size:0.8em;\">➤</span>\n    <span style=\"text-shadow:1px 1px 1.5px rgba(0,0,0,0.9);letter-spacing:0.5px;\">$2</span>\n</div>",
+        "trimStrings": [],
+        "placement": [
+            2
+        ],
+        "disabled": false,
+        "markdownOnly": true,
+        "promptOnly": false,
+        "runOnEdit": false,
+        "substituteRegex": 0,
+        "minDepth": null,
+        "maxDepth": null
+    },
+    {
+        "id": "34ba4558-30ec-4834-81ad-19108be907bc",
+        "scriptName": "不发送选项",
+        "findRegex": "/<selection>[\\s\\S]*?<\\/selection>/g",
+        "replaceString": "",
+        "trimStrings": [],
+        "placement": [
+            2
+        ],
+        "disabled": true,
+        "markdownOnly": false,
+        "promptOnly": true,
+        "runOnEdit": false,
+        "substituteRegex": 0,
+        "minDepth": null,
+        "maxDepth": null
+    },
+    {
+        "id": "6af75498-afcd-4202-90e4-a4662809a16f",
+        "scriptName": "自然行转br-全局",
+        "findRegex": "/\\n/g",
+        "replaceString": "<br>",
+        "trimStrings": [],
+        "placement": [
+            2
+        ],
+        "disabled": true,
+        "markdownOnly": true,
+        "promptOnly": false,
+        "runOnEdit": false,
+        "substituteRegex": 1,
+        "minDepth": null,
+        "maxDepth": null
+    },
+    {
+        "id": "4cb3730f-dedd-4a9b-93f7-53b7e4efdbaf",
+        "scriptName": "5️⃣",
+        "findRegex": "",
+        "replaceString": "",
+        "trimStrings": [],
+        "placement": [
+            2
+        ],
+        "disabled": true,
+        "markdownOnly": true,
+        "promptOnly": false,
+        "runOnEdit": false,
+        "substituteRegex": 0,
+        "minDepth": null,
+        "maxDepth": null
+    },
+    {
+        "id": "5038bcdd-aeda-42aa-9b42-bf93336da6b7",
+        "scriptName": "清理开场白",
+        "findRegex": "/<opening>[\\s\\S]*?<\\/opening>/g",
+        "replaceString": "",
+        "trimStrings": [],
+        "placement": [
+            2
+        ],
+        "disabled": false,
+        "markdownOnly": false,
+        "promptOnly": true,
+        "runOnEdit": false,
+        "substituteRegex": 0,
+        "minDepth": 2,
+        "maxDepth": null
+    },
+    {
+        "id": "9b80fdb2-c53e-4962-956e-4d89ec9d2846",
+        "scriptName": "清理好感度符号",
+        "findRegex": "/{{Loop:.*?}}|{{End Loop}}/g",
+        "replaceString": "",
+        "trimStrings": [],
+        "placement": [
+            2
+        ],
+        "disabled": false,
+        "markdownOnly": true,
+        "promptOnly": false,
+        "runOnEdit": false,
+        "substituteRegex": 1,
+        "minDepth": null,
+        "maxDepth": null
+    },
+    {
+        "id": "4ba01822-8752-4575-acb2-ba4a5700a0d2",
+        "scriptName": "清空玩家输入历史记录",
+        "findRegex": "^[\\s\\S]*$",
+        "replaceString": "",
+        "trimStrings": [],
+        "placement": [
+            1
+        ],
+        "disabled": false,
+        "markdownOnly": false,
+        "promptOnly": true,
+        "runOnEdit": false,
+        "substituteRegex": 0,
+        "minDepth": 2,
+        "maxDepth": null
+    },
+    {
+        "id": "ec6891d2-2ce8-49e7-b582-b7c651624aeb",
+        "scriptName": "清理防截断内容",
+        "findRegex": "<secure_log>[\\s\\S]*?<\\/secure_log>",
+        "replaceString": "",
+        "trimStrings": [],
+        "placement": [
+            2
+        ],
+        "disabled": false,
+        "markdownOnly": true,
+        "promptOnly": true,
+        "runOnEdit": false,
+        "substituteRegex": 1,
+        "minDepth": null,
+        "maxDepth": null
+    },
+    {
+        "id": "52319b81-5dd0-40b2-b19c-a758d8f06b7e",
+        "scriptName": "⬇️不发送思维链",
+        "findRegex": "",
+        "replaceString": "",
+        "trimStrings": [],
+        "placement": [
+            2
+        ],
+        "disabled": true,
+        "markdownOnly": true,
+        "promptOnly": false,
+        "runOnEdit": false,
+        "substituteRegex": 0,
+        "minDepth": null,
+        "maxDepth": null
+    },
+    {
+        "id": "68f3bcb4-0fb3-4f61-aad1-12d7b8941e38",
+        "scriptName": "不发送当前故事思维链",
+        "findRegex": "/<story_driver>[\\s\\S]*?<\\/story_driver>/g",
+        "replaceString": "",
+        "trimStrings": [],
+        "placement": [
+            2
+        ],
+        "disabled": true,
+        "markdownOnly": false,
+        "promptOnly": true,
+        "runOnEdit": false,
+        "substituteRegex": 0,
+        "minDepth": null,
+        "maxDepth": 2
+    },
+    {
+        "id": "fbb3ba87-ab25-4d16-8120-01805a61d8b0",
+        "scriptName": "不发送当前NPC思维链",
+        "findRegex": "/<npc_driver>[\\s\\S]*?<\\/npc_driver>/g",
+        "replaceString": "",
+        "trimStrings": [],
+        "placement": [
+            2
+        ],
+        "disabled": true,
+        "markdownOnly": false,
+        "promptOnly": true,
+        "runOnEdit": false,
+        "substituteRegex": 0,
+        "minDepth": 0,
+        "maxDepth": 2
+    },
+    {
+        "id": "3f976116-dea6-45e8-8a3b-6f99b4258b8d",
+        "scriptName": "不发送当前战斗思维链",
+        "findRegex": "<combat_driver>[\\s\\S]*?<\\/combat_driver>/g",
+        "replaceString": "",
+        "trimStrings": [],
+        "placement": [
+            2
+        ],
+        "disabled": true,
+        "markdownOnly": false,
+        "promptOnly": true,
+        "runOnEdit": false,
+        "substituteRegex": 0,
+        "minDepth": 0,
+        "maxDepth": 2
+    }
+]

@@ -7,7 +7,7 @@ import type { Lorebook, ChatPreset, AppSettings, ChatSession, UserProfile, Regex
 import { DEFAULT_SETTINGS, DEFAULT_FORMAT_PROMPT } from './types';
 
 const DB_NAME = 'SillyTavernWebDB';
-const DB_VERSION = 12;
+const DB_VERSION = 13;
 
 // Old format prompt strings shipped before the current default; if a stored template
 // matches any of these (i.e. the user never customised it), we silently bump it to the
@@ -431,6 +431,28 @@ class AppDatabase extends Dexie {
         await tx.table('users').put(SEEDED_KOORI);
       }
     });
+    this.version(13).stores({
+      lorebooks: 'id, name, updatedAt',
+      presets: 'id, name, updatedAt',
+      settings: 'key',
+      chats: 'id, name, updatedAt',
+      users: 'id, name, updatedAt',
+      regexes: 'id, scriptName, updatedAt',
+    }).upgrade(async (tx) => {
+      // 2026-05-17: switch default preset (双人成行 → 咩咩预设 V2.6.5) and
+      // seed a default regex set. Clear both tables so init re-seeds from
+      // the new asset files; clear activePresetId since the old id will
+      // no longer resolve.
+      await tx.table('presets').clear();
+      await tx.table('regexes').clear();
+      const settings = await tx.table('settings').toCollection().toArray();
+      for (const s of settings) {
+        if (s.activePresetId) {
+          s.activePresetId = null;
+          await tx.table('settings').put(s);
+        }
+      }
+    });
   }
 }
 
@@ -443,14 +465,12 @@ export function getDatabase(): AppDatabase {
   return dbInstance;
 }
 
-const PRIMARY_PRESET_NAME = '双人成行 V6.1—向斜阳';
+const PRIMARY_PRESET_NAME = '咩咩预设 V2.6.5';
 
 function looksLikePrimaryPreset(p: ChatPreset): boolean {
   if (p.name === PRIMARY_PRESET_NAME) return true;
-  if (typeof p.name === 'string' && p.name.includes('双人成行')) return true;
-  const prompts = (p.settings as { prompts?: unknown[] })?.prompts;
-  // Heuristic: the primary preset has 200+ sub-prompts.
-  return Array.isArray(prompts) && prompts.length >= 100;
+  if (typeof p.name === 'string' && p.name.includes('咩咩')) return true;
+  return false;
 }
 
 let initPromise: Promise<void> | null = null;
@@ -480,10 +500,11 @@ async function initializeDatabaseInner(): Promise<void> {
     try {
       const defaultPresetData = (await import('../assets/defaultPreset.json')).default as Record<string, any>;
       const presetName = defaultPresetData.preset || defaultPresetData.name || PRIMARY_PRESET_NAME;
+      const promptCount = Array.isArray(defaultPresetData.prompts) ? defaultPresetData.prompts.length : 0;
       primary = {
         id: crypto.randomUUID(),
         name: presetName,
-        description: '导入的 SillyTavern 文风预设；含 232 个子 prompt，可在 PRESETS · 提示词块 tab 自由开关。',
+        description: `导入的 SillyTavern 文风预设；含 ${promptCount} 个子 prompt，可在 PRESETS · 提示词块 tab 自由开关。`,
         settings: defaultPresetData,
         createdAt: Date.now(),
         updatedAt: Date.now(),
@@ -506,6 +527,25 @@ async function initializeDatabaseInner(): Promise<void> {
       defaultLorebookId = defaultLorebook.id;
     } catch (e) {
       console.warn('Failed to load default lorebook:', e);
+    }
+  }
+
+  // Seed default regex set (咩咩专用正则) when the table is empty.
+  const regexCount = await db.regexes.count();
+  if (regexCount === 0) {
+    try {
+      const defaultRegexes = (await import('../assets/defaultRegexes.json')).default as RegexScript[];
+      if (Array.isArray(defaultRegexes) && defaultRegexes.length > 0) {
+        const now = Date.now();
+        const seeded = defaultRegexes.map((r) => ({
+          ...r,
+          createdAt: r.createdAt ?? now,
+          updatedAt: r.updatedAt ?? now,
+        }));
+        await db.regexes.bulkPut(seeded);
+      }
+    } catch (e) {
+      console.warn('Failed to load default regexes:', e);
     }
   }
 

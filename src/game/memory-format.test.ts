@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { formatMemoriesForPrompt } from './memory-format';
-import type { MemoryEntry } from './types';
+import type { MemoryEntry } from '../sillytavern/types';
 
 describe('memory-format', () => {
   it('returns empty string when no memories', () => {

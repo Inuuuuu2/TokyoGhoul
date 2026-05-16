@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { parseMemoryBlock, applyMemoryPatch } from './memory-engine';
-import type { MemoryEntry } from './types';
+import type { MemoryEntry } from '../sillytavern/types';
 
 describe('memory-engine.parseMemoryBlock', () => {
   it('parses add/update/delete', () => {

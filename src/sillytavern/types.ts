@@ -455,8 +455,9 @@ export interface ParsedTags {
   sum: string;
   varsRaw: string;
   varsCommands: VarsPatch;
+  /** Raw <memory> block content; parse via game/memory-engine.parseMemoryBlock
+   *  on demand (ST core stays unaware of memory semantics). */
   memoryRaw: string;
-  memoryPatch: MemoryPatch;
   unknown: Record<string, string>;
 }
 

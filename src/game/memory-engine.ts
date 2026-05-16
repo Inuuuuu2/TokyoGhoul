@@ -6,8 +6,8 @@
  * the table's idPrefix + a per-table sequence number.
  */
 
-import type { MemoryEntry, MemoryPatch, MemoryTable } from './types';
-import { MEMORY_TABLE_SCHEMAS, MEMORY_TABLES } from './types';
+import type { MemoryEntry, MemoryPatch, MemoryTable } from '../sillytavern/types';
+import { MEMORY_TABLE_SCHEMAS, MEMORY_TABLES } from '../sillytavern/types';
 
 const RESERVED_ROW_KEYS = new Set(['id']);
 

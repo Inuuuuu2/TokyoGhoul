@@ -5,7 +5,7 @@ import { ThinkingFold } from "../SillyTavern/ThinkingFold";
 import type { RegexScript } from "../../sillytavern/types";
 import { applyDisplayRules } from "../../sillytavern/regex-engine";
 import { sanitizeHtml } from "../../sillytavern/html-render";
-import { resolveAvatar } from "../../sillytavern/avatar-registry";
+import { resolveAvatar } from "../../game/avatar-registry";
 
 interface ChatHistoryListProps {
   messages: any[];

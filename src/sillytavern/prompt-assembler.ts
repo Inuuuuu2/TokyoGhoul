@@ -2,10 +2,9 @@
  * Prompt Assembler
  */
 
-import type { ChatPreset, Lorebook, ChatMessage, MatchedEntry, MemoryEntry, RegexScript } from './types';
+import type { ChatPreset, Lorebook, ChatMessage, MatchedEntry, RegexScript } from './types';
 import { createLorebookEngine } from './lorebook-engine';
 import { formatVariablesForPrompt } from './variables';
-import { formatMemoriesForPrompt } from './memory-format';
 import { applyPromptRules } from './regex-engine';
 
 export interface AssembleOptions {
@@ -21,7 +20,9 @@ export interface AssembleOptions {
   variables?: Record<string, string | number>;
   extraVariables?: Record<string, any>;
   formatPrompt?: string;
-  memories?: MemoryEntry[];
+  /** Pre-rendered memory section (opaque to ST core). Caller is responsible for
+   *  rendering MemoryEntry[] → string before passing in. */
+  memorySection?: string;
   /** SillyTavern regex scripts; only entries with promptOnly=true are applied
    *  (placement 1 → user msgs, placement 2 → assistant msgs). */
   regexes?: RegexScript[];
@@ -34,7 +35,7 @@ export interface AssembleResult {
 }
 
 export function assemblePrompt(options: AssembleOptions): AssembleResult {
-  const { userInput, history, preset, lorebooks, userName, characterName, userDescription, variables, extraVariables, formatPrompt, memories, regexes } = options;
+  const { userInput, history, preset, lorebooks, userName, characterName, userDescription, variables, extraVariables, formatPrompt, memorySection, regexes } = options;
   const regexRules = regexes ?? [];
 
   const allMatchedEntries: MatchedEntry[] = [];
@@ -170,8 +171,7 @@ export function assemblePrompt(options: AssembleOptions): AssembleResult {
 
   // 上下文（记忆 / 变量）：作为 system message 接在 beforeHistory 末尾，AI 在读历史前就能看到
   const ctxParts: string[] = [];
-  const memoriesBlock = formatMemoriesForPrompt(memories);
-  if (memoriesBlock) ctxParts.push(memoriesBlock);
+  if (memorySection && memorySection.trim()) ctxParts.push(memorySection);
   const variablesBlock = formatVariablesForPrompt(variables || {});
   if (variablesBlock) ctxParts.push(variablesBlock);
   if (extraVariables && Object.keys(extraVariables).length > 0) {

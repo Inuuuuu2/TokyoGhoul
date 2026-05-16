@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { CustomFactionForm, type CustomFactionState } from './CustomFactionForm';
 import { useSillytavern } from '../../hooks/useSillytavern';
-import { resolveAvatar } from '../../sillytavern/avatar-registry';
+import { resolveAvatar } from '../../game/avatar-registry';
 
 export type Faction = 'ghoul' | 'ccg' | 'human' | 'custom';
 

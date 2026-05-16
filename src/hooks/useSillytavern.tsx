@@ -3,7 +3,8 @@ import { useStreamParser } from './useStreamParser';
 import { useApiRouter } from './useApiRouter';
 import { applyParsedToChat } from '../sillytavern/variables';
 import { assemblePrompt } from '../sillytavern/prompt-assembler';
-import { applyMemoryPatch, type MemorySequences } from '../sillytavern/memory-engine';
+import { applyMemoryPatch, parseMemoryBlock, type MemorySequences } from '../game/memory-engine';
+import { formatMemoriesForPrompt } from '../game/memory-format';
 import type { MemoryEntry } from '../sillytavern/types';
 import {
   DEFAULT_TAGS,
@@ -447,7 +448,7 @@ function useSillytavernImpl() {
         userDescription: activeUser?.description,
         extraVariables: baseChat.variables,
         formatPrompt: settings.formatPromptTemplate,
-        memories: baseChat.memories ?? [],
+        memorySection: formatMemoriesForPrompt(baseChat.memories ?? []),
         regexes,
       });
       setLastPromptMessages(messages.map((m) => ({ role: m.role, content: m.content })));
@@ -509,7 +510,7 @@ function useSillytavernImpl() {
       };
       const { memories: nextMemories, sequences: nextSequences } = applyMemoryPatch(
         baseChat.memories ?? [],
-        parsed.memoryPatch,
+        parseMemoryBlock(parsed.memoryRaw),
         { sourceMessageId: assistantMsgId, sequences: baseChat.memorySequences },
       );
       const finalChat: ChatSession = {

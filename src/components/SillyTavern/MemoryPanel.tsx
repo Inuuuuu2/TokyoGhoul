@@ -2,7 +2,7 @@ import { useMemo, useState } from 'react';
 import { useSillytavern } from '../../hooks/useSillytavern';
 import { MEMORY_TABLES, MEMORY_TABLE_SCHEMAS } from '../../sillytavern/types';
 import type { MemoryTable } from '../../sillytavern/types';
-import { applyMemoryPatch } from '../../sillytavern/memory-engine';
+import { applyMemoryPatch } from '../../game/memory-engine';
 import { MemoryTableView } from './MemoryTableView';
 
 export function MemoryPanel({ onClose }: { onClose: () => void }) {

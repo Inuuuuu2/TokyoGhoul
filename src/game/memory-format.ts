@@ -6,8 +6,8 @@
  * in its <memory> output, avoiding duplicates.
  */
 
-import type { MemoryEntry, MemoryTable } from './types';
-import { MEMORY_TABLE_SCHEMAS, MEMORY_TABLES } from './types';
+import type { MemoryEntry, MemoryTable } from '../sillytavern/types';
+import { MEMORY_TABLE_SCHEMAS, MEMORY_TABLES } from '../sillytavern/types';
 
 export function formatMemoriesForPrompt(memories: MemoryEntry[] = []): string {
   if (!memories.length) return '';

@@ -9,7 +9,7 @@ import { normalizePromptOrder } from './editor-utils';
 import { importLorebook } from './importer';
 
 const DB_NAME = 'SillyTavernWebDB';
-const DB_VERSION = 15;
+const DB_VERSION = 16;
 
 // Old format prompt strings shipped before the current default; if a stored template
 // matches any of these (i.e. the user never customised it), we silently bump it to the
@@ -559,6 +559,26 @@ class AppDatabase extends Dexie {
         if (patched) await tx.table('settings').put(s);
       }
     });
+    this.version(16).stores({
+      lorebooks: 'id, name, updatedAt',
+      presets: 'id, name, updatedAt',
+      settings: 'key',
+      chats: 'id, name, updatedAt',
+      users: 'id, name, updatedAt',
+      regexes: 'id, scriptName, updatedAt',
+    }).upgrade(async (tx) => {
+      // 2026-05-17: stitch 5 anti-hijack / anti-repeat prompts harvested from
+      // 双人成行 V6.1 into the primary 咩咩预设 stored in existing users' DBs.
+      // Seed code does the same for fresh installs.
+      const presets = await tx.table('presets').toCollection().toArray();
+      for (const p of presets) {
+        const isPrimary = p?.name === PRIMARY_PRESET_NAME || (typeof p?.name === 'string' && p.name.includes('咩咩'));
+        if (!isPrimary) continue;
+        const next = await mergeAntiHijackPrompts(p.settings ?? {});
+        if (next === p.settings) continue;
+        await tx.table('presets').put({ ...p, settings: next, updatedAt: Date.now() });
+      }
+    });
   }
 }
 
@@ -577,6 +597,26 @@ function looksLikePrimaryPreset(p: ChatPreset): boolean {
   if (p.name === PRIMARY_PRESET_NAME) return true;
   if (typeof p.name === 'string' && p.name.includes('咩咩')) return true;
   return false;
+}
+
+/** Append the 5 anti-hijack / anti-repeat prompts harvested from 双人成行 V6.1
+ *  into a preset's `settings` (idempotent — re-runs are no-ops). Caller must
+ *  pre-normalize `prompt_order` to the flat shape; both seed and v16 migration
+ *  satisfy this. */
+async function mergeAntiHijackPrompts(settings: Record<string, any>): Promise<Record<string, any>> {
+  const antiHijack = (await import('../assets/antiHijackPrompts.json')).default as Array<Record<string, any>>;
+  const existingPromptIds = new Set((settings.prompts ?? []).map((p: any) => p.identifier));
+  const newPrompts = antiHijack.filter((p) => !existingPromptIds.has(p.identifier));
+  if (newPrompts.length === 0) return settings;
+  const existingOrderIds = new Set((settings.prompt_order ?? []).map((o: any) => o.identifier));
+  const newOrderEntries = antiHijack
+    .filter((p) => !existingOrderIds.has(p.identifier))
+    .map((p) => ({ identifier: p.identifier, enabled: true }));
+  return {
+    ...settings,
+    prompts: [...(settings.prompts ?? []), ...newPrompts],
+    prompt_order: [...(settings.prompt_order ?? []), ...newOrderEntries],
+  };
 }
 
 let initPromise: Promise<void> | null = null;
@@ -608,11 +648,13 @@ async function initializeDatabaseInner(): Promise<void> {
       const presetName = defaultPresetData.preset || defaultPresetData.name || PRIMARY_PRESET_NAME;
       const promptCount = Array.isArray(defaultPresetData.prompts) ? defaultPresetData.prompts.length : 0;
       // Flatten wrapped prompt_order at seed time so the on-disk shape stays
-      // consistent with what assembler / editor expect.
-      const seededSettings = {
+      // consistent with what assembler / editor expect; then stitch in the
+      // 5 anti-hijack / anti-repeat prompts harvested from 双人成行.
+      const flatSettings = {
         ...defaultPresetData,
         prompt_order: normalizePromptOrder(defaultPresetData.prompt_order),
       };
+      const seededSettings = await mergeAntiHijackPrompts(flatSettings);
       primary = {
         id: crypto.randomUUID(),
         name: presetName,
